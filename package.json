@@ -1,0 +1,18 @@
+{
+  "name": "health-scanner-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "backend",
+    "mobile"
+  ],
+  "scripts": {
+    "build:shared": "npm --workspace=@health-scanner/shared run build",
+    "build:backend": "npm --workspace=@health-scanner/backend run build",
+    "test:backend": "npm --workspace=@health-scanner/backend test",
+    "dev:backend": "npm --workspace=@health-scanner/backend run dev",
+    "start:mobile": "npm --workspace=@health-scanner/mobile start",
+    "start:tunnel": "npm --workspace=@health-scanner/mobile run tunnel"
+  }
+}

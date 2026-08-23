@@ -1,0 +1,17 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Git & IDE
+.git
+.vscode
+.idea
+
+# Build outputs & caches
+.expo
+android
+ios
+dist
+web-build
+*.db
+*.log

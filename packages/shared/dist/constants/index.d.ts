@@ -1,0 +1,8 @@
+import { HealthCondition, DietaryRestriction, HealthRule } from '../types';
+export declare const MASTER_HEALTH_CONDITIONS: HealthCondition[];
+export declare const MASTER_DIETARY_PREFERENCES: DietaryRestriction[];
+export declare const MASTER_ALLERGENS: DietaryRestriction[];
+export declare const DEFAULT_HEURISTIC_RULES: HealthRule[];
+export declare const MANDATORY_MEDICAL_DISCLAIMER_EN = "This app provides general nutrition information and personalized food guidance based on the information you provide. It is not medical advice and does not replace advice from a qualified healthcare professional.";
+export declare const MANDATORY_MEDICAL_DISCLAIMER_ML = "\u0D08 \u0D06\u0D2A\u0D4D\u0D2A\u0D4D \u0D28\u0D7D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D24\u0D4D \u0D2A\u0D4A\u0D24\u0D41\u0D35\u0D3E\u0D2F \u0D2A\u0D4B\u0D37\u0D15\u0D3E\u0D39\u0D3E\u0D30 \u0D35\u0D3F\u0D35\u0D30\u0D19\u0D4D\u0D19\u0D33\u0D41\u0D02 \u0D28\u0D3F\u0D19\u0D4D\u0D19\u0D33\u0D41\u0D1F\u0D46 \u0D24\u0D3F\u0D30\u0D1E\u0D4D\u0D1E\u0D46\u0D1F\u0D41\u0D2A\u0D4D\u0D2A\u0D41\u0D15\u0D7E\u0D15\u0D4D\u0D15\u0D4D \u0D05\u0D28\u0D41\u0D38\u0D43\u0D24\u0D2E\u0D3E\u0D2F \u0D28\u0D3F\u0D7C\u0D26\u0D4D\u0D26\u0D47\u0D36\u0D19\u0D4D\u0D19\u0D33\u0D41\u0D02 \u0D2E\u0D3E\u0D24\u0D4D\u0D30\u0D2E\u0D3E\u0D23\u0D4D. \u0D07\u0D24\u0D4D \u0D35\u0D48\u0D26\u0D4D\u0D2F\u0D4B\u0D2A\u0D26\u0D47\u0D36\u0D2E\u0D32\u0D4D\u0D32, \u0D21\u0D4B\u0D15\u0D4D\u0D1F\u0D31\u0D41\u0D1F\u0D46 \u0D28\u0D3F\u0D7C\u0D26\u0D4D\u0D26\u0D47\u0D36\u0D19\u0D4D\u0D19\u0D7E\u0D15\u0D4D\u0D15\u0D4D \u0D2A\u0D15\u0D30\u0D2E\u0D3E\u0D35\u0D3F\u0D32\u0D4D\u0D32.";
+//# sourceMappingURL=index.d.ts.map

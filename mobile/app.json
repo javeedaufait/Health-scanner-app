@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "AI Food Scanner",
+    "slug": "ai-food-scanner",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#064e3b"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.healthscanner.aifoodscanner",
+      "infoPlist": {
+        "NSCameraUsageDescription": "AI Food Scanner uses the camera to scan food barcodes and nutrition labels."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#064e3b"
+      },
+      "package": "com.healthscanner.aifoodscanner",
+      "permissions": [
+        "CAMERA",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow AI Food Scanner to access camera to scan food labels and barcodes."
+        }
+      ]
+    ],
+    "scheme": "healthscanner",
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "f93b0709-01b1-48ad-8d25-bad30cf7438d"
+      }
+    },
+    "owner": "javeedktexp"
+  }
+}
