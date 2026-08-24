@@ -116,6 +116,9 @@ export default function ResultScreen() {
             {scan.reasons.map((reason, idx) => {
               const msg = language === 'ml' ? reason.messageMl : reason.messageEn;
               const advice = language === 'ml' ? reason.betterChoiceAdviceMl : reason.betterChoiceAdviceEn;
+              const sourceText = reason.classification === 'HEURISTIC'
+                ? 'App-generated guidance heuristic'
+                : reason.source;
 
               return (
                 <View key={idx} style={styles.reasonItem}>
@@ -124,6 +127,11 @@ export default function ResultScreen() {
                   </Text>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.reasonMessage}>{msg}</Text>
+                    {sourceText && (
+                      <Text style={styles.sourceTag}>
+                        Ref: {sourceText}
+                      </Text>
+                    )}
                     {advice && <Text style={styles.reasonAdvice}>💡 {advice}</Text>}
                   </View>
                 </View>
@@ -276,6 +284,13 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: '600',
     lineHeight: 20,
+  },
+  sourceTag: {
+    ...typography.bodySmall,
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   reasonAdvice: {
     ...typography.bodySmall,
