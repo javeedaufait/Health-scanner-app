@@ -20,6 +20,7 @@ const STORAGE_KEYS = {
   CUSTOM_PRODUCTS: '@health_custom_products',
   RESET_CODES: 'health_reset_codes',
   USER_CREDENTIALS: 'health_user_credentials',
+  USERS_REGISTRY: 'health_users_registry',
 };
 
 // Helper for Android Keystore / iOS Keychain hardware encryption
@@ -63,6 +64,23 @@ async function deleteSecure(key: string): Promise<void> {
     }
   } catch (e) {}
   await AsyncStorage.removeItem(`@${key}`);
+}
+
+interface LocalUserRecord {
+  userId: string;
+  email: string;
+  name: string;
+  passwordHash: string;
+  createdAt: string;
+}
+
+async function getUsersRegistry(): Promise<Record<string, LocalUserRecord>> {
+  const str = await getSecure(STORAGE_KEYS.USERS_REGISTRY);
+  return str ? JSON.parse(str) : {};
+}
+
+async function saveUsersRegistry(registry: Record<string, LocalUserRecord>): Promise<void> {
+  await saveSecure(STORAGE_KEYS.USERS_REGISTRY, JSON.stringify(registry));
 }
 
 // Built-in verified product catalog for offline supermarket speed
@@ -304,9 +322,29 @@ class LocalApiClient {
 
   // --- Auth & Session ---
   async register(body: { email: string; password: string; name: string }) {
+    const emailLower = body.email.trim().toLowerCase();
+    const registry = await getUsersRegistry();
+
+    if (registry[emailLower]) {
+      throw new Error('An account with this email address already exists. Please log in instead.');
+    }
+
+    const userId = `user-${Date.now()}`;
+    const now = new Date().toISOString();
+
+    registry[emailLower] = {
+      userId,
+      email: emailLower,
+      name: body.name.trim(),
+      passwordHash: body.password,
+      createdAt: now,
+    };
+
+    await saveUsersRegistry(registry);
+
     const session = {
-      userId: `user-${Date.now()}`,
-      email: body.email.trim().toLowerCase(),
+      userId,
+      email: emailLower,
       name: body.name.trim(),
       token: `local-token-${Date.now()}`,
       languagePreference: 'en' as const,
@@ -327,40 +365,41 @@ class LocalApiClient {
   }
 
   async login(body: { email: string; password: string }) {
-    const existingStr = await getSecure(STORAGE_KEYS.USER_SESSION);
-    if (existingStr) {
-      const session = JSON.parse(existingStr);
-      return {
-        ...session,
-        email: body.email.trim().toLowerCase(),
-      };
+    const emailLower = body.email.trim().toLowerCase();
+    const registry = await getUsersRegistry();
+    const user = registry[emailLower];
+
+    if (!user) {
+      throw new Error('No account found with this email address. Please register first.');
     }
 
-    // Auto create session for immediate local login
+    if (body.password !== user.passwordHash) {
+      throw new Error('Invalid email or password.');
+    }
+
     const session = {
-      userId: `user-${Date.now()}`,
-      email: body.email.trim().toLowerCase(),
-      name: body.email.split('@')[0] || 'User',
+      userId: user.userId,
+      email: user.email,
+      name: user.name,
       languagePreference: 'en' as const,
       disclaimerAcknowledged: false,
       token: `local-token-${Date.now()}`,
     };
 
-    const initialProfile: UserProfile = {
-      ...DEFAULT_INITIAL_PROFILE,
-      userId: session.userId,
-      name: session.name,
-    };
-
     await saveSecure(STORAGE_KEYS.USER_SESSION, JSON.stringify(session));
     await saveSecure(STORAGE_KEYS.USER_CREDENTIALS, JSON.stringify({ email: session.email, name: session.name }));
-    await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(initialProfile));
     return session;
   }
 
   async forgotPassword(email: string) {
+    const emailLower = email.trim().toLowerCase();
+    const registry = await getUsersRegistry();
+    if (!registry[emailLower]) {
+      throw new Error('No account found with this email address.');
+    }
+
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    await saveSecure(STORAGE_KEYS.RESET_CODES, JSON.stringify({ email, resetCode, expiresAt: Date.now() + 15 * 60 * 1000 }));
+    await saveSecure(STORAGE_KEYS.RESET_CODES, JSON.stringify({ email: emailLower, resetCode, expiresAt: Date.now() + 15 * 60 * 1000 }));
     return {
       success: true,
       message: 'A 6-digit verification code has been generated.',
@@ -369,10 +408,21 @@ class LocalApiClient {
   }
 
   async resetPassword(body: { email: string; resetCode: string; newPassword: string }) {
+    const emailLower = body.email.trim().toLowerCase();
+    const registry = await getUsersRegistry();
+    const user = registry[emailLower];
+
+    if (!user) {
+      throw new Error('No account found with this email address.');
+    }
+
+    user.passwordHash = body.newPassword;
+    await saveUsersRegistry(registry);
     await deleteSecure(STORAGE_KEYS.RESET_CODES);
+
     return {
       success: true,
-      message: 'Password reset successfully! You can now log in.',
+      message: 'Password reset successfully! You can now log in with your new password.',
     };
   }
 
@@ -425,6 +475,17 @@ class LocalApiClient {
   }
 
   async deleteAccount() {
+    // Delete account from local users registry
+    const sessionStr = await getSecure(STORAGE_KEYS.USER_SESSION);
+    if (sessionStr) {
+      const session = JSON.parse(sessionStr);
+      if (session.email) {
+        const registry = await getUsersRegistry();
+        delete registry[session.email.toLowerCase()];
+        await saveUsersRegistry(registry);
+      }
+    }
+
     await deleteSecure(STORAGE_KEYS.USER_SESSION);
     await deleteSecure(STORAGE_KEYS.USER_CREDENTIALS);
     await deleteSecure(STORAGE_KEYS.RESET_CODES);
@@ -434,7 +495,7 @@ class LocalApiClient {
       STORAGE_KEYS.SAVED_PRODUCTS,
       STORAGE_KEYS.CUSTOM_PRODUCTS,
     ]);
-    return { success: true, message: 'All local account data and hardware keys cleared.' };
+    return { success: true, message: 'Your account and all associated data have been permanently deleted.' };
   }
 
   // --- Products & Barcode Lookup ---
