@@ -242,9 +242,10 @@ function evaluateFoodForUser(input) {
         overallSummaryMl = 'നിങ്ങളുടെ ആരോഗ്യ ലക്ഷ്യങ്ങൾക്കും മുൻഗണനകൾക്കും അനുയോജ്യമായ ഉൽപ്പന്നം.';
     }
     return {
+        ruleSetVersion: constants_1.RULE_SET_VERSION,
         status,
         personalizedGuidanceScore,
-        score: personalizedGuidanceScore, // Alias for UI components
+        score: personalizedGuidanceScore, // Deprecated alias for backwards compatibility
         reasons,
         allergenWarnings,
         hasAllergenHazard,

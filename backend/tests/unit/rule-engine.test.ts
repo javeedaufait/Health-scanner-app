@@ -1,8 +1,21 @@
 import { evaluateFoodForUser } from '../../src/modules/rule-engine/evaluator';
 
 describe('Deterministic Health Rule Evaluation Engine (FSSAI, ICMR-NIN & WHO Audited)', () => {
-  describe('Diabetes & Blood Sugar Rules', () => {
-    it('should flag High Added Sugar for a user with Diabetes with single-source-of-truth metadata', () => {
+  describe('Rule Set Version & Canonical Metadata', () => {
+    it('should include ruleSetVersion and canonical personalizedGuidanceScore on evaluation output', () => {
+      const result = evaluateFoodForUser({
+        userProfile: { conditions: ['none'] },
+        productNutrition: { energyKcal: 100, sodiumMg: 20 },
+      });
+
+      expect(result.ruleSetVersion).toBe('2026.1-audited');
+      expect(result.personalizedGuidanceScore).toBe(100);
+      expect(result.score).toBe(100); // Deprecated alias
+    });
+  });
+
+  describe('Diabetes & Blood Sugar Guidance Rules', () => {
+    it('should flag High Added Sugar for a user with Diabetes with Draft FSSAI FoPL benchmark metadata', () => {
       const result = evaluateFoodForUser({
         userProfile: { conditions: ['diabetes'] },
         productNutrition: {
@@ -19,11 +32,10 @@ describe('Deterministic Health Rule Evaluation Engine (FSSAI, ICMR-NIN & WHO Aud
 
       expect(result.status).not.toBe('GOOD_CHOICE');
       expect(result.personalizedGuidanceScore).toBeLessThanOrEqual(70);
-      expect(result.score).toBe(result.personalizedGuidanceScore);
       const sugarReason = result.reasons.find((r) => r.conditionCode === 'diabetes' && r.nutrient === 'addedSugarsG');
       expect(sugarReason).toBeDefined();
       expect(sugarReason?.classification).toBe('INDIRECTLY_SUPPORTED');
-      expect(sugarReason?.source).toContain('FSSAI Draft FoPL');
+      expect(sugarReason?.source).toContain('Draft FSSAI FoPL');
       expect(sugarReason?.severity).toBe('high');
     });
 
@@ -94,6 +106,27 @@ describe('Deterministic Health Rule Evaluation Engine (FSSAI, ICMR-NIN & WHO Aud
 
       expect(result.status).toBe('GOOD_CHOICE');
       expect(result.personalizedGuidanceScore).toBe(100);
+    });
+  });
+
+  describe('Cholesterol & Saturated / Trans Fat Rules', () => {
+    it('should flag High Saturated Fat (>=5g) and Trans Fat (>0.2g FSSAI claim limit)', () => {
+      const result = evaluateFoodForUser({
+        userProfile: { conditions: ['high_cholesterol'] },
+        productNutrition: {
+          energyKcal: 540,
+          saturatedFatG: 15.2, // High saturated fat
+          transFatG: 0.3, // Exceeds 0.2g FSSAI claim limit
+          fatG: 34,
+        },
+        ingredientsList: ['potato', 'palm oil', 'salt'],
+      });
+
+      expect(result.status).toBe('NOT_A_GOOD_CHOICE');
+      const transReason = result.reasons.find((r) => r.nutrient === 'transFatG');
+      expect(transReason).toBeDefined();
+      expect(transReason?.threshold).toBe(0.2);
+      expect(transReason?.classification).toBe('INDIRECTLY_SUPPORTED');
     });
   });
 
@@ -182,7 +215,7 @@ describe('Deterministic Health Rule Evaluation Engine (FSSAI, ICMR-NIN & WHO Aud
           proteinG: 5.0,
           fatG: 21.0,
           saturatedFatG: 7.5,
-          transFatG: 0.2,
+          transFatG: 0.3,
           fibreG: 1.2,
           sodiumMg: 880, // High sodium (>800mg)
           saltG: 2.2,
@@ -198,6 +231,7 @@ describe('Deterministic Health Rule Evaluation Engine (FSSAI, ICMR-NIN & WHO Aud
         detectedAllergens: ['wheat_gluten', 'milk'],
       });
 
+      expect(result.ruleSetVersion).toBe('2026.1-audited');
       expect(result.status).toBe('NOT_A_GOOD_CHOICE');
       expect(result.hasAllergenHazard).toBe(true);
 

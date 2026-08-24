@@ -27,7 +27,7 @@
   "onboarding_step_4_subtitle": "Do you avoid any specific foods or allergens?",
   "onboarding_step_5_title": "Medications",
   "onboarding_step_5_subtitle": "Do you currently take any medicines?",
-  "onboarding_step_5_notice": "Medication information is saved for your personal records. This app provides non-clinical nutrition guidance.",
+  "onboarding_step_5_notice": "Medication information is saved for your personal records. This MVP does not evaluate food-medication interactions.",
   "onboarding_step_6_title": "Medical Disclaimer",
   "onboarding_step_6_agree": "I Understand and Agree",
 
@@ -49,13 +49,8 @@
   "use_caution": "USE CAUTION",
   "not_a_good_choice": "NOT A GOOD CHOICE",
 
-  "guidance_score_label": "Personalized Guidance Score",
-  "guidance_score_sub": "Heuristic nutrient score based on public guidelines (FSSAI, ICMR-NIN, WHO)",
   "why_title": "Why this assessment?",
   "allergen_alert_title": "Allergen Warning",
-  "allergen_hazard_title": "Biological Allergen Hazard Alert",
-  "kidney_advisory_title": "Clinical Advisory (Kidney Health)",
-  "missing_data_notice": "Data Incomplete: Some nutrition facts were not listed on this package label.",
   "nutrition_breakdown_title": "Nutrition Information",
   "per_100g": "Per 100g",
   "ingredients_title": "Ingredients",
@@ -69,6 +64,6 @@
   "my_health_profile": "My Health Profile",
   "edit_profile": "Edit Health Profile",
 
-  "disclaimer_text": "This app provides general nutritional information and personalized food guidance based on public guidelines (FSSAI, ICMR-NIN, WHO) and your inputs. It is not medical advice, a clinical diagnosis, or a guarantee of safety. Always consult a qualified healthcare professional for medical decisions.",
+  "disclaimer_text": "Food guidance is based on nutrition heuristics and your selected health profile. This is not medical advice. Always consult your doctor or qualified healthcare professional.",
   "allergy_disclaimer": "Always verify the physical package label before consuming, especially for severe allergies."
 }

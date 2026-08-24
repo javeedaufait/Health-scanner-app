@@ -7,7 +7,7 @@ import {
   HealthRule,
   AllergenRestrictionCode,
 } from './types';
-import { MASTER_ALLERGENS, DEFAULT_HEURISTIC_RULES } from './constants';
+import { MASTER_ALLERGENS, DEFAULT_HEURISTIC_RULES, RULE_SET_VERSION } from './constants';
 
 // Common synonyms/derivatives for Indian food ingredient labels
 const ALLERGEN_KEYWORD_MAP: Record<AllergenRestrictionCode, string[]> = {
@@ -287,9 +287,10 @@ export function evaluateFoodForUser(input: EvaluateFoodInput): RuleEvaluationRes
   }
 
   return {
+    ruleSetVersion: RULE_SET_VERSION,
     status,
     personalizedGuidanceScore,
-    score: personalizedGuidanceScore, // Alias for UI components
+    score: personalizedGuidanceScore, // Deprecated alias for backwards compatibility
     reasons,
     allergenWarnings,
     hasAllergenHazard,

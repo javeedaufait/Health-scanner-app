@@ -1,97 +1,69 @@
-# Comprehensive Health & Nutrition Rule Audit Report
+# Comprehensive Health & Nutrition Rule Audit Report (Revised & Rigorous)
 
 **Date**: August 24, 2026  
 **Application**: AI Food Scanner (Kerala / India Focus)  
-**Audit Target**: Health Rule Engine, Scoring Algorithm, Evidence Claims, and Medical Disclaimers  
-**Primary Reference Standards**:
-1. **FSSAI** – *Food Safety and Standards (Labelling and Display) Regulations, 2020* & *Draft FoPL (Indian Nutrition Rating) 2022/2023 Guidelines*
-2. **ICMR-NIN** – *Dietary Guidelines for Indians (2024)* & *Recommended Dietary Allowances (RDA 2020)*
-3. **WHO** – *WHO Guidelines on Sugars Intake (2015)*, *Sodium Benchmarks for Packaged Foods (2021)*, and *Trans Fat Elimination Guidelines (2023)*
+**Audit Purpose**: Rigorous, Evidence-Based Distinction Between Regulatory Label Claims, Draft Standards, Daily Dietary Allowances, and Heuristic App Rules  
+**Primary Reference Authorities**:
+1. **FSSAI** – *Food Safety and Standards (Labelling and Display) Regulations, 2020* (Final Regulations) & *Draft FoPL (Indian Nutrition Rating) 2022/2023 Guidelines* (Draft/Proposed)
+2. **ICMR-NIN** – *Dietary Guidelines for Indians (2024)* & *Recommended Dietary Allowances (RDA 2020)* (Daily Dietary Recommendations)
+3. **WHO** – *WHO Guidelines on Sugars Intake (2015)*, *Global Sodium Benchmarks for Packaged Foods (2021)*, and *Trans Fat Elimination Regulations (2023)*
 
 ---
 
-## 1. Executive Summary & Audit Mandate
+## 1. Core Audit Principles & Methodology
 
-The AI Food Scanner app evaluates packaged food items for users based on their personal health conditions (e.g., Diabetes, Hypertension, High Cholesterol) and dietary restrictions (e.g., Milk allergy, Vegan).
+To ensure strict scientific integrity and avoid misrepresenting regulatory or clinical standards:
 
-### Key Audit Audit Principles Applied:
-- **No False Authority**: A rule is attributed to ICMR-NIN, FSSAI, or WHO **only** if the primary source explicitly supports that exact cutoff.
-- **Distinction Between Daily Intake vs. Product Density**: Daily nutrient recommendations (e.g., WHO $<2000\text{mg}$ sodium/day) cannot be assumed to validate a per-100g product threshold unless explicitly established by front-of-pack labelling (FoPL) standards.
-- **Draft vs. Final Regulations**: FSSAI Draft FoPL material is explicitly designated as **[Draft/Proposed FSSAI FoPL]**.
-- **Scoring Description**: The scoring output is described as a **"Personalized Heuristic Guidance Score"**, NOT a "clinical diagnosis" or medical guarantee of safety.
-- **Separation of Allergens vs. Nutrition Scoring**: Allergen matches are handled as **Hard Safety Warnings**, distinct from numerical nutrient deductions.
-- **Missing Data**: Missing nutrition values are explicitly flagged as **`UNKNOWN` / Missing**, not assumed to be zero.
-- **Kidney Disease Scrutiny**: Specialized medical conditions (e.g., Kidney Disease) yield conservative clinical advisory notices rather than automated health points.
-
----
-
-## 2. Complete Inventory & Classification of Current Rules
-
-Every implemented rule has been audited and classified under one of the 5 mandatory categories:
-1. **`DIRECTLY_SUPPORTED`**: Explicitly backed by published, final regulations/standards (e.g., FSSAI 2020 claim limits).
-2. **`INDIRECTLY_SUPPORTED`**: Derived from official draft FoPL benchmarks or established product category benchmarks (e.g., WHO global sodium benchmarks).
-3. **`HEURISTIC`**: Derived rule designed for personal guidance where official standards do not specify single-product per-100g cutoffs.
-4. **`UNSUPPORTED`**: Thresholds with insufficient primary source evidence.
-5. **`CLINICAL_REVIEW_REQUIRED`**: Medical conditions requiring physician/dietitian oversight.
+1. **No Conflation of Label Claims with Disease Cutoffs**: An FSSAI "Low Sugar" ($\le 5\text{g}/100\text{g}$) or "Low Sodium" ($\le 120\text{mg}/100\text{g}$) criteria is an **official food-labelling claim threshold**. It is NOT a clinical diabetes or hypertension diagnostic threshold. Using it as a disease rule is an **App Heuristic**.
+2. **Draft/Proposed Material Must Be Explicitly Designated**: FSSAI Front-of-Pack Labelling (FoPL / INR 2022) criteria (e.g. $10\text{g}/100\text{g}$ added sugar, $600\text{mg}/100\text{g}$ sodium) are **Draft/Proposed HFSS (High in Fat, Sugar, Salt) Benchmarks**, NOT final enforced regulations or medical guidelines.
+3. **Daily Recommendations vs. Per-100g Product Density**: ICMR-NIN and WHO daily nutrient limits (e.g., WHO $<25\text{g}$ free sugar/day or $<2000\text{mg}$ sodium/day) are **Daily Total Diet Guidelines**. They do NOT define per-100g product thresholds unless explicitly established as a product category benchmark (e.g., WHO 2021 Global Sodium Benchmarks).
+4. **Classification Rigor**:
+   - `DIRECTLY_SUPPORTED`: The source supports the **EXACT SAME USE** of the per-100g threshold in our app (e.g., FSSAI Trans Fat limit $<0.2\text{g}/100\text{g}$).
+   - `INDIRECTLY_SUPPORTED`: Derived from official draft FoPL benchmarks or WHO product category benchmarks.
+   - `HEURISTIC`: An app-designed consumer guidance rule derived from general nutrition principles where no disease-specific per-100g threshold exists in official literature.
+   - `CLINICAL_REVIEW_REQUIRED`: Disease conditions (e.g. Kidney Disease) requiring individualized nephrology/dietitian supervision rather than static 100g heuristics.
 
 ---
 
-### Audit Table of All Rules
+## 2. Revised Master Audit Table
 
-| Rule ID | Target Condition | Nutrient / Target | Current Threshold | Primary Source Reference | Classification | Audit Findings & Recommended Actions |
-|---|---|---|---|---|---|---|
-| `rule-diabetes-added-sugar-high` | Diabetes | Added Sugars | $\ge 10\text{g} / 100\text{g}$ | FSSAI Draft FoPL 2022 Schedule I ($10\text{g}/100\text{g}$ solid threshold); ICMR-NIN 2024 Daily Added Sugar limit ($<25\text{g}/day$) | `INDIRECTLY_SUPPORTED` | Supported by FSSAI Draft FoPL Schedule I ($10\text{g}/100\text{g}$). Update description to clarify it is based on FSSAI Draft FoPL & ICMR-NIN sugar guidance. |
-| `rule-diabetes-added-sugar-mod` | Diabetes | Added Sugars | $\ge 5\text{g} / 100\text{g}$ | FSSAI 2020 Labelling Regs (Schedule I: "Low Sugar" claim threshold is $\le 5\text{g}/100\text{g}$) | `DIRECTLY_SUPPORTED` | Directly supported by FSSAI 2020 Low Sugar definition. Retain threshold ($5\text{g}/100\text{g}$). |
-| `rule-diabetes-sugars-high` | Diabetes | Total Sugars | $\ge 15\text{g} / 100\text{g}$ | FSSAI Draft FoPL 2022 Schedule I ($15\text{g}/100\text{g}$ for solid foods) | `INDIRECTLY_SUPPORTED` | Directly matches FSSAI Draft FoPL high total sugar threshold for solid food. Re-classify as Indirectly Supported. |
-| `rule-prediabetes-sugar-high` | Prediabetes | Added Sugars | $\ge 8\text{g} / 100\text{g}$ | Intermediate heuristic cutoff between 5g and 10g | `HEURISTIC` | Primary sources do not specify an 8g prediabetes threshold. Re-classify as `HEURISTIC` for prediabetes guidance. |
-| `rule-hypertension-sodium-critical` | Hypertension | Sodium | $\ge 800\text{mg} / 100\text{g}$ | WHO Global Sodium Benchmarks 2021 (Instant noodles / savoury snacks $800\text{mg}/100\text{g}$); WHO Daily Sodium $<2000\text{mg}$ | `INDIRECTLY_SUPPORTED` | Matches WHO Category Benchmark for ultra-processed savoury items. Re-classify as Indirectly Supported (WHO Category Benchmarks). |
-| `rule-hypertension-sodium-high` | Hypertension | Sodium | $\ge 500\text{mg} / 100\text{g}$ | FSSAI Draft FoPL 2022 ($600\text{mg}/100\text{g}$); WHO Sodium Benchmark | `INDIRECTLY_SUPPORTED` | **Adjust threshold from 500mg to 600mg** to align directly with FSSAI Draft FoPL / WHO $600\text{mg}/100\text{g}$ high-sodium cutoff. |
-| `rule-hypertension-sodium-mod` | Hypertension | Sodium | $\ge 350\text{mg} / 100\text{g}$ | Intermediate threshold above FSSAI Low Sodium ($120\text{mg}/100\text{g}$) | `HEURISTIC` | Intermediate threshold. Re-classify as `HEURISTIC` for sodium awareness. |
-| `rule-cholesterol-satfat-high` | High Cholesterol | Saturated Fat | $\ge 5\text{g} / 100\text{g}$ | FSSAI Draft FoPL 2022 Schedule I ($5\text{g}/100\text{g}$ solid threshold); WHO Saturated Fat Guidelines ($<10\%$ E) | `INDIRECTLY_SUPPORTED` | Matches FSSAI Draft FoPL cutoff for High Saturated Fat in solid foods. Re-classify as Indirectly Supported. |
-| `rule-cholesterol-transfat` | High Cholesterol | Trans Fat | $> 0.1\text{g} / 100\text{g}$ | FSSAI 2020 Regulations (Trans fat free claim limit $<0.2\text{g}/100\text{g}$); WHO Elimination of Trans Fats | `DIRECTLY_SUPPORTED` | Directly supported by FSSAI trans-fat regulations ($<0.2\text{g}$ per 100g for 0g claim). Adjust threshold slightly to $> 0.2\text{g}$ or $>0.1\text{g}$. |
-| `rule-heart-sodium-satfat` | Heart Health | Saturated Fat | $\ge 4\text{g} / 100\text{g}$ | Intermediate heuristic threshold | `HEURISTIC` | Intermediate threshold. Re-classify explicitly as `HEURISTIC`. |
-| `rule-weight-energy-high` | Weight Management | Energy (Kcal) | $\ge 450\text{kcal} / 100\text{g}$ | High energy density benchmark (FSSAI / ICMR High Calorie density) | `HEURISTIC` | Useful energy density metric. Re-classify as `HEURISTIC`. |
-| `rule-weight-sugar-high` | Weight Management | Sugars | $\ge 12\text{g} / 100\text{g}$ | Intermediate weight management heuristic | `HEURISTIC` | Intermediate threshold. Re-classify as `HEURISTIC`. |
-| `kidney-disease-advisory` | Kidney Disease | All Nutrients | Clinical Advisory | Clinical Practice Guidelines (KDOQI / KDIGO Guidelines) | `CLINICAL_REVIEW_REQUIRED` | Automatic point scoring cannot replace clinical nephrology management. Replaces points with a **Conservative Non-Clinical Advisory Notice**. |
-| `allergen-restriction-check` | Allergens / Restrictions | Ingredients / Allergens | Exact Match | FSSAI 2020 Mandatory Declaration of 8 Major Allergens (Schedule II) | `DIRECTLY_SUPPORTED` | Directly supported by FSSAI Allergen Declaration Regulations. Evaluated separately as a **Hard Safety Warning**, independent of numerical scoring. |
-
----
-
-## 3. Analysis of System Architecture & Terminology Adjustments
-
-### A. "Personalized Heuristic Guidance Score" vs. "Clinical Diagnosis"
-- **Audit Requirement**: The term "clinical score", "medically safe", or "WHO approved" must be removed.
-- **Adjustment**: The app's scoring output is explicitly termed **"Personalized Heuristic Guidance Score"**. It represents an informative consumer guide derived from personal preferences and public guidelines, NOT a diagnostic medical tool.
-
-### B. Separation of Allergen Safety Warnings from Nutrient Scoring
-- **Audit Requirement**: Allergens represent immediate biological safety hazards (e.g. anaphylaxis risk for peanut allergy), whereas nutrient thresholds represent gradual dietary quality indicators.
-- **Adjustment**: 
-  - **Nutrient Engine**: Calculates a 0–100 Guidance Score based on nutrient thresholds.
-  - **Allergen Engine**: Evaluates independently. If an allergen is detected, it outputs a **Hard Safety Hazard Alert** and sets assessment status to `NOT_A_GOOD_CHOICE`, keeping the allergen alert distinct from nutrient point deductions.
-
-### C. Treatment of Missing / Unknown Nutrition Data
-- **Audit Requirement**: Missing values on food labels must not be treated as zero.
-- **Adjustment**: Missing values are stored as `null` / `UNKNOWN`. If key fields (e.g., sodium or sugar) are missing, the evaluator outputs an explicit notice: *"Data Incomplete: Sodium/Sugar is not listed on this package."*
-
-### D. Kidney Disease Handling
-- **Audit Requirement**: Kidney disease (CKD) requires clinical monitoring of Potassium, Phosphorus, Sodium, and Protein based on GFR stage.
-- **Adjustment**: The engine does NOT deduct arbitrary score points for kidney disease. Instead, it flags a prominent clinical notice: *"Kidney disease requires tailored clinical management. Please consult your nephrologist or renal dietitian for specific dietary limits."*
+| Rule ID | Current Threshold | What the Source Actually Supports | Distinguishing Category | Classification | Recommended Action |
+|---|---|---|---|---|---|
+| `rule-diabetes-added-sugar-high` | Added Sugars $\ge 10\text{g} / 100\text{g}$ | **Draft FSSAI FoPL 2022** Schedule I proposes $10\text{g}/100\text{g}$ as the High Added Sugar (HFSS) indicator for solid foods. **ICMR-NIN 2024** recommends $<25\text{g}/day$ total diet added sugar. | **Draft FoPL Benchmark / Daily Intake Guideline** | `INDIRECTLY_SUPPORTED` | **Keep**. Label clearly in UI as *"Draft FSSAI FoPL HFSS Benchmark & ICMR-NIN Daily Sugar Limit"*. |
+| `rule-diabetes-added-sugar-mod` | Added Sugars $\ge 5\text{g} / 100\text{g}$ | **FSSAI 2020 Regulations** (Schedule I) defines $\le 5\text{g}/100\text{g}$ as the voluntary claim criteria for "Low Sugar". It is NOT a clinical diabetes cutoff. | **Official Food-Labelling Claim Threshold** | `HEURISTIC` | **Keep as App Heuristic**. Re-classify from `DIRECTLY_SUPPORTED` to `HEURISTIC`. Update UI explanation to *"Exceeds FSSAI Low-Sugar label claim benchmark"*. |
+| `rule-diabetes-sugars-high` | Total Sugars $\ge 15\text{g} / 100\text{g}$ | **Draft FSSAI FoPL 2022** Schedule I proposes $15\text{g}/100\text{g}$ as the High Total Sugar benchmark for solid food. | **Draft FoPL Benchmark** | `INDIRECTLY_SUPPORTED` | **Keep**. Clarify source as *"Draft FSSAI FoPL HFSS Benchmark (2022)"*. |
+| `rule-prediabetes-sugar-high` | Added Sugars $\ge 8\text{g} / 100\text{g}$ | Intermediate threshold between 5g and 10g. No primary source specifies an 8g prediabetes product cutoff. | **App Heuristic** | `HEURISTIC` | **Keep as App Heuristic**. Label explicitly as consumer guidance heuristic. |
+| `rule-hypertension-sodium-critical` | Sodium $\ge 800\text{mg} / 100\text{g}$ | **WHO Global Sodium Benchmarks (2021)** defines $800\text{mg}/100g$ for savoury snacks/instant noodles. **WHO 2023** daily sodium limit is $<2000\text{mg}/day$. | **Product-Level Nutrient Benchmark** | `INDIRECTLY_SUPPORTED` | **Keep**. Cite *"WHO Global Sodium Product Benchmark (2021)"*. |
+| `rule-hypertension-sodium-high` | Sodium $\ge 500\text{mg} / 100\text{g}$ | **Draft FSSAI FoPL 2022** Schedule I specifies $600\text{mg}/100\text{g}$ as the High Sodium (HFSS) threshold. | **Draft FoPL Benchmark** | `INDIRECTLY_SUPPORTED` | **Change Threshold to 600mg**. Adjust from 500mg to $600\text{mg}/100\text{g}$ to align directly with Draft FSSAI FoPL. |
+| `rule-hypertension-sodium-mod` | Sodium $\ge 350\text{mg} / 100\text{g}$ | Intermediate sodium level above FSSAI Low Sodium claim ($120\text{mg}/100\text{g}$). | **App Heuristic** | `HEURISTIC` | **Keep as App Heuristic**. |
+| `rule-cholesterol-satfat-high` | Saturated Fat $\ge 5\text{g} / 100\text{g}$ | **Draft FSSAI FoPL 2022** Schedule I specifies $5\text{g}/100\text{g}$ as High Saturated Fat threshold for solid foods. | **Draft FoPL Benchmark** | `INDIRECTLY_SUPPORTED` | **Keep**. Cite *"Draft FSSAI FoPL HFSS Benchmark (2022)"*. |
+| `rule-cholesterol-transfat` | Trans Fat $> 0.1\text{g} / 100\text{g}$ | **FSSAI 2022 Regulations** mandates industrial trans fats $<2\%$ of total fats and caps "Trans Fat Free" claims at $<0.2\text{g}/100\text{g}$. **WHO REPLACE** targets 0g industrial trans fat. | **Official Product Regulation & Claim Limit** | `DIRECTLY_SUPPORTED` | **Keep**. Set threshold to $>0.2\text{g}/100\text{g}$ (or $>0.1\text{g}$). Directly supported by FSSAI trans-fat regulations. |
+| `rule-heart-satfat` | Saturated Fat $\ge 4\text{g} / 100\text{g}$ | Intermediate saturated fat threshold for heart health. | **App Heuristic** | `HEURISTIC` | **Keep as App Heuristic**. |
+| `rule-weight-energy-high` | Energy $\ge 450\text{kcal} / 100\text{g}$ | High energy density benchmark (solid food calorie density). | **App Heuristic** | `HEURISTIC` | **Keep as App Heuristic**. |
+| `rule-weight-sugar-high` | Total Sugars $\ge 12\text{g} / 100\text{g}$ | Weight management sugar benchmark. | **App Heuristic** | `HEURISTIC` | **Keep as App Heuristic**. |
+| `kidney-disease-advisory` | Kidney Disease | Clinical nephrology guidelines require GFR-specific electrolyte monitoring (Potassium, Phosphorus, Sodium, Protein). | **Clinical Recommendation** | `CLINICAL_REVIEW_REQUIRED` | **Change**. Remove numerical point deductions. Provide non-clinical advisory notice. |
+| `allergen-restriction-check` | Allergens | **FSSAI 2020 Regulations** (Schedule II) mandates declaration of 8 major allergens. | **Official Product Regulation** | `DIRECTLY_SUPPORTED` | **Keep**. Evaluated separately as a **Biological Safety Hazard**, independent of numerical nutrient score. |
 
 ---
 
-## 4. Updates to Medical Disclaimers & Language (English & Malayalam)
+## 3. Architecture & Terminology Standardizations
 
-### Mandatory Disclaimer (English):
-> *"This app provides general nutritional information and personalized guidance based on public guidelines (FSSAI, ICMR-NIN, WHO) and your inputs. It is not medical advice, a clinical diagnosis, or a guarantee of safety. Always consult a qualified healthcare professional for medical decisions."*
-
-### Mandatory Disclaimer (Malayalam):
-> *"ഈ ആപ്പ് നൽകുന്നത് പൊതുവായ പോഷകാഹാര വിവരങ്ങളും (FSSAI, ICMR-NIN, WHO മാർഗ്ഗനിർദ്ദേശങ്ങൾ) നിങ്ങളുടെ മുൻഗണനകൾക്ക് അനുസൃതമായ പൊതുവായ നിർദ്ദേശങ്ങളും മാത്രമാണ്. ഇത് വൈദ്യോപദേശമോ ക്ലിനിക്കൽ രോഗനിർണ്ണയമോ അല്ല. ആരോഗ്യപരമായ തീരുമാനങ്ങൾക്ക് എപ്പോഴും ഡോക്ടറുടെ സേവനം തേടുക."*
+1. **Score Naming**: The output score is formally named **"Personalized Guidance Score"**. It is explicitly defined as an **app-generated heuristic guidance score**, NOT a validated clinical score or medical diagnosis.
+2. **Separation of Allergen Safety Warnings**:
+   - Allergen matches output `hasAllergenHazard: true` and set status to `NOT_A_GOOD_CHOICE`.
+   - Nutrient rules compute the 0–100 `Personalized Guidance Score`.
+3. **Missing Data Handling**:
+   - `null` or `undefined` nutrient values are treated as `UNKNOWN`, NOT zero.
+   - Does not deduct false score points. Sets `isMissingNutritionData` flag.
+4. **Kidney Disease Handling**:
+   - Provides conservative advisory: *"Kidney disease requires personalized clinical management. Please consult your nephrologist or renal dietitian for specialized dietary limits."*
 
 ---
 
-## 5. Audit Conclusions & Implementation Steps
+## 4. Mandatory Medical Disclaimers
 
-1. **Update Code Constants**: Update `packages/shared/src/constants/index.ts` and `mobile/src/shared/constants/index.ts` with exact source attributions and updated classifications.
-2. **Update Evaluator Logic**: Refactor `evaluator.ts` to separate Allergen Warnings from Numerical Nutrient Deductions and handle `null`/`UNKNOWN` values properly.
-3. **Update Unit Tests**: Update unit tests in `tests/unit/rule-engine.test.ts` to reflect the updated threshold classifications and separate allergen checks.
-4. **Update UI Wording**: Ensure all UI screens display "Personalized Guidance Score" and the updated non-clinical disclaimer.
+### English Disclaimer:
+> *"This app provides general nutritional information and a Personalized Guidance Score based on public guidelines (FSSAI, ICMR-NIN, WHO) and your selected preferences. It is an app-generated heuristic, not medical advice, a clinical diagnosis, or a guarantee of safety. Always consult a qualified healthcare professional for medical decisions."*
+
+### Malayalam Disclaimer:
+> *"ഈ ആപ്പ് നൽകുന്നത് പൊതുവായ പോഷകാഹാര വിവരങ്ങളും നിങ്ങളുടെ തിരഞ്ഞെടുപ്പുകൾക്ക് അനുസൃതമായ പേഴ്സണലൈസ്ഡ് ഗൈഡൻസ് സ്കോറും മാത്രമാണ്. ഇത് ആപ്പ് നൽകുന്ന ഒരു സൂചന മാത്രമാണ്, വൈദ്യോപദേശമോ ക്ലിനിക്കൽ രോഗനിർണ്ണയമോ അല്ല. ആരോഗ്യപരമായ തീരുമാനങ്ങൾക്ക് എപ്പോഴും ഡോക്ടറുടെ സേവനം തേടുക."*

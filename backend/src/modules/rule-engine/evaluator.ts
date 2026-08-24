@@ -7,15 +7,10 @@ import {
   HealthRule,
   AllergenRestrictionCode,
   evaluateFoodForUser as evaluateFoodForUserShared,
+  EvaluateFoodInput as EvaluateFoodInputShared,
 } from '@health-scanner/shared';
 
-export interface EvaluateFoodInput {
-  userProfile: Partial<UserProfile>;
-  productNutrition: NutritionValues;
-  ingredientsList?: string[];
-  detectedAllergens?: AllergenRestrictionCode[];
-  customRules?: HealthRule[];
-}
+export type EvaluateFoodInput = EvaluateFoodInputShared;
 
 export function evaluateFoodForUser(input: EvaluateFoodInput): RuleEvaluationResult {
   return evaluateFoodForUserShared(input);

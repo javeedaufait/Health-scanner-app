@@ -1,5 +1,7 @@
 import { HealthCondition, DietaryRestriction, HealthRule } from '../types';
 
+export const RULE_SET_VERSION = '2026.1-audited';
+
 export const MASTER_HEALTH_CONDITIONS: HealthCondition[] = [
   {
     code: 'none',
@@ -180,7 +182,7 @@ export const MASTER_ALLERGENS: DietaryRestriction[] = [
 ];
 
 export const DEFAULT_HEURISTIC_RULES: HealthRule[] = [
-  // Diabetes & Prediabetes Rules (Per 100g)
+  // Diabetes & Blood Sugar Guidance Rules (Per 100g)
   {
     id: 'rule-diabetes-added-sugar-high',
     conditionCode: 'diabetes',
@@ -190,11 +192,11 @@ export const DEFAULT_HEURISTIC_RULES: HealthRule[] = [
     threshold: 10,
     unit: 'g',
     classification: 'INDIRECTLY_SUPPORTED',
-    source: 'FSSAI Draft FoPL (2022) / ICMR-NIN (2024)',
+    source: 'Draft FSSAI FoPL (2022) Solid HFSS Benchmark',
     severity: 'high',
     deduction: 30,
-    messageEn: 'High added sugar content (≥10g per 100g). May cause rapid blood glucose spikes.',
-    messageMl: 'കൂടുതൽ അളവിൽ ചേർത്ത പഞ്ചസാര അടങ്ങിയിരിക്കുന്നു (100 ഗ്രാമിൽ 10 ഗ്രാമിൽ കൂടുതൽ), ഇത് രക്തത്തിലെ പഞ്ചസാര വർദ്ധിപ്പിച്ചേക്കാം.',
+    messageEn: 'Exceeds Draft FSSAI FoPL benchmark for solid foods (≥10g added sugar per 100g).',
+    messageMl: 'ചേർത്ത പഞ്ചസാര ഉയർന്ന അളവിലാണ് (100 ഗ്രാമിൽ 10 ഗ്രാമിൽ കൂടുതൽ).',
     adviceEn: 'Look for packaged foods with under 5g added sugars per 100g.',
     adviceMl: '100 ഗ്രാമിൽ 5 ഗ്രാമിൽ താഴെ പഞ്ചസാരയുള്ള ഉൽപ്പന്നങ്ങൾ തിരഞ്ഞെടുക്കുക.',
     isActive: true,
@@ -207,11 +209,11 @@ export const DEFAULT_HEURISTIC_RULES: HealthRule[] = [
     operator: '>=',
     threshold: 5,
     unit: 'g',
-    classification: 'DIRECTLY_SUPPORTED',
-    source: 'FSSAI (2020) Low Sugar Claim Limit (≤5g/100g)',
+    classification: 'HEURISTIC',
+    source: 'Derived from FSSAI (2020) Low Sugar Claim Criteria',
     severity: 'moderate',
     deduction: 15,
-    messageEn: 'Moderate added sugar (≥5g per 100g). Exceeds Low Sugar claim threshold.',
+    messageEn: 'Exceeds FSSAI Low Sugar label claim criteria (≥5g added sugar per 100g).',
     messageMl: 'മിതമായ അളവിൽ പഞ്ചസാര അടങ്ങിയിരിക്കുന്നു. അളവ് നിയന്ത്രിച്ച് ഉപയോഗിക്കുക.',
     adviceEn: 'Prefer whole-grain snacks with higher dietary fibre.',
     adviceMl: 'കൂടുതൽ നാരുകൾ അടങ്ങിയ ലഘുഭക്ഷണങ്ങൾ തിരഞ്ഞെടുക്കുക.',
@@ -226,10 +228,10 @@ export const DEFAULT_HEURISTIC_RULES: HealthRule[] = [
     threshold: 15,
     unit: 'g',
     classification: 'INDIRECTLY_SUPPORTED',
-    source: 'FSSAI Draft FoPL (2022) High Total Sugar Limit',
+    source: 'Draft FSSAI FoPL (2022) Solid HFSS Benchmark',
     severity: 'high',
     deduction: 25,
-    messageEn: 'Total sugars exceed 15g per 100g.',
+    messageEn: 'Exceeds Draft FSSAI FoPL benchmark for total sugar (≥15g per 100g).',
     messageMl: 'ആകെ പഞ്ചസാര 100 ഗ്രാമിൽ 15 ഗ്രാമിൽ കൂടുതലാണ്.',
     adviceEn: 'Choose unsweetened alternatives.',
     adviceMl: 'മധുരം ചേർക്കാത്ത ഉൽപ്പന്നങ്ങൾ തിരഞ്ഞെടുക്കുക.',
@@ -247,7 +249,7 @@ export const DEFAULT_HEURISTIC_RULES: HealthRule[] = [
     source: 'Guidance Heuristic',
     severity: 'high',
     deduction: 25,
-    messageEn: 'Elevated added sugar (≥8g per 100g) may accelerate risk of insulin resistance.',
+    messageEn: 'Elevated added sugar (≥8g per 100g) may contribute to higher sugar intake.',
     messageMl: 'ഉയർന്ന അളവിലുള്ള പഞ്ചസാര പ്രമേഹ സാധ്യത വർദ്ധിപ്പിച്ചേക്കാം.',
     adviceEn: 'Look for low sugar (<5g/100g) snacks.',
     adviceMl: 'കുറഞ്ഞ പഞ്ചസാര അടങ്ങിയ ലഘുഭക്ഷണങ്ങൾ തിരഞ്ഞെടുക്കുക.',
@@ -264,10 +266,10 @@ export const DEFAULT_HEURISTIC_RULES: HealthRule[] = [
     threshold: 800,
     unit: 'mg',
     classification: 'INDIRECTLY_SUPPORTED',
-    source: 'WHO Global Sodium Benchmarks (2021)',
+    source: 'WHO Global Sodium Category Benchmarks (2021)',
     severity: 'critical',
     deduction: 35,
-    messageEn: 'Very high sodium content (≥800mg per 100g), significantly impacting blood pressure.',
+    messageEn: 'Exceeds WHO Global Sodium Category Benchmark for savoury snacks/noodles (≥800mg/100g).',
     messageMl: 'വളരെ ഉയർന്ന അളവിൽ സോഡിയം/ഉപ്പ് അടങ്ങിയിരിക്കുന്നു (100 ഗ്രാമിൽ 800 മില്ലിഗ്രാമിൽ കൂടുതൽ).',
     adviceEn: 'Look for low sodium products (<140mg per 100g).',
     adviceMl: 'കുറഞ്ഞ സോഡിയം അടങ്ങിയ ഉൽപ്പന്നങ്ങൾ തിരഞ്ഞെടുക്കുക (100 ഗ്രാമിൽ 140 മില്ലിഗ്രാമിൽ താഴെ).',
@@ -282,10 +284,10 @@ export const DEFAULT_HEURISTIC_RULES: HealthRule[] = [
     threshold: 600,
     unit: 'mg',
     classification: 'INDIRECTLY_SUPPORTED',
-    source: 'FSSAI Draft FoPL (2022) High Sodium Limit (600mg/100g)',
+    source: 'Draft FSSAI FoPL (2022) High Sodium Benchmark (600mg/100g)',
     severity: 'high',
     deduction: 20,
-    messageEn: 'High sodium content (≥600mg per 100g).',
+    messageEn: 'Exceeds Draft FSSAI FoPL benchmark for high sodium (≥600mg per 100g).',
     messageMl: 'കൂടുതൽ സോഡിയം അടങ്ങിയിരിക്കുന്നു (100 ഗ്രാമിൽ 600 മില്ലിഗ്രാമിൽ കൂടുതൽ).',
     adviceEn: 'Consider items with reduced sodium options.',
     adviceMl: 'കുറഞ്ഞ ഉപ്പുള്ള ഉൽപ്പന്നങ്ങൾ തിരഞ്ഞെടുക്കാൻ ശ്രദ്ധിക്കുക.',
@@ -318,10 +320,10 @@ export const DEFAULT_HEURISTIC_RULES: HealthRule[] = [
     threshold: 5,
     unit: 'g',
     classification: 'INDIRECTLY_SUPPORTED',
-    source: 'FSSAI Draft FoPL (2022) / WHO Saturated Fat Guidelines',
+    source: 'Draft FSSAI FoPL (2022) Solid HFSS Benchmark',
     severity: 'high',
     deduction: 25,
-    messageEn: 'High saturated fat (≥5g per 100g), which may elevate LDL cholesterol.',
+    messageEn: 'Exceeds Draft FSSAI FoPL benchmark for saturated fat (≥5g per 100g).',
     messageMl: 'പൂരിത കൊഴുപ്പ് (സാച്ചുറേറ്റഡ് ഫാറ്റ്) കൂടുതലാണ്, ഇത് കൊളസ്ട്രോൾ വർദ്ധിപ്പിച്ചേക്കാം.',
     adviceEn: 'Choose products with <1.5g saturated fat per 100g.',
     adviceMl: '100 ഗ്രാമിൽ 1.5 ഗ്രാമിൽ താഴെ സാച്ചുറേറ്റഡ് ഫാറ്റ് ഉള്ളവ തിരഞ്ഞെടുക്കുക.',
@@ -333,13 +335,13 @@ export const DEFAULT_HEURISTIC_RULES: HealthRule[] = [
     nutrient: 'transFatG',
     basis: 'per_100g',
     operator: '>',
-    threshold: 0.1,
+    threshold: 0.2,
     unit: 'g',
-    classification: 'DIRECTLY_SUPPORTED',
-    source: 'FSSAI (2020) Trans Fat Regulations / WHO REPLACE Strategy',
+    classification: 'INDIRECTLY_SUPPORTED',
+    source: 'FSSAI (2022) Trans Fat Free Claim Limit (≤0.2g/100g)',
     severity: 'critical',
     deduction: 30,
-    messageEn: 'Contains industrial trans fats. Advised against for cardiovascular health.',
+    messageEn: 'Exceeds FSSAI Trans-Fat-Free claim limit (>0.2g trans fat per 100g).',
     messageMl: 'ട്രാൻസ് ഫാറ്റ് അടങ്ങിയിരിക്കുന്നു, ഇത് ഹൃദയാരോഗ്യത്തിന് ദോഷകരമാണ്.',
     adviceEn: 'Choose 0g trans fat foods with healthy unsaturated oils.',
     adviceMl: 'പൂർണ്ണമായും ട്രാൻസ് ഫാറ്റ് ഇല്ലാത്ത ഭക്ഷണങ്ങൾ തിരഞ്ഞെടുക്കുക.',
@@ -357,7 +359,7 @@ export const DEFAULT_HEURISTIC_RULES: HealthRule[] = [
     source: 'Guidance Heuristic',
     severity: 'high',
     deduction: 20,
-    messageEn: 'Elevated saturated fat content for heart health.',
+    messageEn: 'Elevated saturated fat content for heart health guidance.',
     messageMl: 'ഹൃദയാരോഗ്യത്തിന് അനുയോജ്യമല്ലാത്ത അളവിൽ സാച്ചുറേറ്റഡ് ഫാറ്റ് അടങ്ങിയിരിക്കുന്നു.',
     isActive: true,
   },
@@ -400,7 +402,7 @@ export const DEFAULT_HEURISTIC_RULES: HealthRule[] = [
 ];
 
 export const MANDATORY_MEDICAL_DISCLAIMER_EN =
-  'This app provides general nutritional information and personalized food guidance based on public guidelines (FSSAI, ICMR-NIN, WHO) and your inputs. It is not medical advice, a clinical diagnosis, or a guarantee of safety. Always consult a qualified healthcare professional for medical decisions.';
+  'This app provides general nutritional information and a Personalized Guidance Score based on public guidelines (FSSAI, ICMR-NIN, WHO) and your selected preferences. It is an app-generated heuristic, not medical advice, a clinical diagnosis, or a guarantee of safety. Always consult a qualified healthcare professional for medical decisions.';
 
 export const MANDATORY_MEDICAL_DISCLAIMER_ML =
-  'ഈ ആപ്പ് നൽകുന്നത് പൊതുവായ പോഷകാഹാര വിവരങ്ങളും (FSSAI, ICMR-NIN, WHO മാർഗ്ഗനിർദ്ദേശങ്ങൾ) നിങ്ങളുടെ മുൻഗണനകൾക്ക് അനുസൃതമായ പൊതുവായ നിർദ്ദേശങ്ങളും മാത്രമാണ്. ഇത് വൈദ്യോപദേശമോ ക്ലിനിക്കൽ രോഗനിർണ്ണയമോ അല്ല. ആരോഗ്യപരമായ തീരുമാനങ്ങൾക്ക് എപ്പോഴും ഡോക്ടറുടെ സേവനം തേടുക.';
+  'ഈ ആപ്പ് നൽകുന്നത് പൊതുവായ പോഷകാഹാര വിവരങ്ങളും നിങ്ങളുടെ തിരഞ്ഞെടുപ്പുകൾക്ക് അനുസൃതമായ പേഴ്സണലൈസ്ഡ് ഗൈഡൻസ് സ്കോറും മാത്രമാണ്. ഇത് ആപ്പ് നൽകുന്ന ഒരു സൂചന മാത്രമാണ്, വൈദ്യോപദേശമോ ക്ലിനിക്കൽ രോഗനിർണ്ണയമോ അല്ല. ആരോഗ്യപരമായ തീരുമാനങ്ങൾക്ക് എപ്പോഴും ഡോക്ടറുടെ സേവനം തേടുക.';

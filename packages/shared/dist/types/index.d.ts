@@ -98,8 +98,10 @@ export interface AllergenWarning {
     messageMl: string;
 }
 export interface RuleEvaluationResult {
+    ruleSetVersion: string;
     status: AssessmentStatus;
     personalizedGuidanceScore: number;
+    /** @deprecated Use `personalizedGuidanceScore` instead. Retained for backwards compatibility. */
     score: number;
     reasons: EvaluationReason[];
     allergenWarnings: AllergenWarning[];

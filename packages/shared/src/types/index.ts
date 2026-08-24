@@ -145,9 +145,11 @@ export interface AllergenWarning {
 }
 
 export interface RuleEvaluationResult {
+  ruleSetVersion: string;
   status: AssessmentStatus;
-  personalizedGuidanceScore: number; // 0 to 100 Personalized Guidance Score
-  score: number; // Alias for UI component compatibility
+  personalizedGuidanceScore: number; // Canonical 0 to 100 Personalized Guidance Score
+  /** @deprecated Use `personalizedGuidanceScore` instead. Retained for backwards compatibility. */
+  score: number;
   reasons: EvaluationReason[];
   allergenWarnings: AllergenWarning[];
   hasAllergenHazard: boolean;
