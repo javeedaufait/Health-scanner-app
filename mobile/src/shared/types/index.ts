@@ -36,6 +36,13 @@ export type AssessmentStatus =
 
 export type SeverityLevel = 'low' | 'moderate' | 'high' | 'critical';
 
+export type RuleClassification =
+  | 'DIRECTLY_SUPPORTED'
+  | 'INDIRECTLY_SUPPORTED'
+  | 'HEURISTIC'
+  | 'UNSUPPORTED'
+  | 'CLINICAL_REVIEW_REQUIRED';
+
 export interface HealthCondition {
   code: HealthConditionCode;
   nameEn: string;
@@ -115,8 +122,13 @@ export interface Product {
 }
 
 export interface EvaluationReason {
+  ruleId?: string;
   conditionCode: string;
   nutrient: string;
+  threshold?: number;
+  unit?: string;
+  classification?: RuleClassification;
+  source?: string;
   severity: SeverityLevel;
   messageEn: string;
   messageMl: string;
@@ -134,13 +146,17 @@ export interface AllergenWarning {
 
 export interface RuleEvaluationResult {
   status: AssessmentStatus;
-  score: number; // 0 to 100
+  personalizedGuidanceScore: number; // 0 to 100 Personalized Guidance Score
+  score: number; // Alias for UI component compatibility
   reasons: EvaluationReason[];
   allergenWarnings: AllergenWarning[];
+  hasAllergenHazard: boolean;
+  kidneyAdvisoryEn?: string;
+  kidneyAdvisoryMl?: string;
   overallSummaryEn: string;
   overallSummaryMl: string;
   isMissingNutritionData: boolean;
-  missingFields?: string[];
+  missingFields: string[];
 }
 
 export interface HealthRule {
@@ -150,6 +166,9 @@ export interface HealthRule {
   basis: 'per_100g' | 'per_serving';
   operator: '>' | '>=' | '<' | '<=';
   threshold: number;
+  unit: 'g' | 'mg' | 'kcal';
+  classification: RuleClassification;
+  source: string;
   severity: SeverityLevel;
   deduction: number;
   messageEn: string;
@@ -168,6 +187,7 @@ export interface ScanRecord {
   scanType: 'barcode' | 'ocr_label';
   assessmentStatus: AssessmentStatus;
   score: number;
+  personalizedGuidanceScore?: number;
   reasons: EvaluationReason[];
   allergenWarnings: AllergenWarning[];
   nutritionSnapshot: NutritionValues;

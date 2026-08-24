@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-  TouchableOpacity,
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -31,7 +30,6 @@ export default function ResultScreen() {
   const [scan, setScan] = useState<ScanRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
-  const [showDetailedNutrition, setShowDetailedNutrition] = useState(false);
 
   useEffect(() => {
     async function fetchScan() {
@@ -77,6 +75,7 @@ export default function ResultScreen() {
   }
 
   const nutrition: NutritionValues = scan.nutritionSnapshot || {};
+  const score = scan.personalizedGuidanceScore ?? scan.score ?? 100;
 
   return (
     <View style={styles.container}>
@@ -88,11 +87,18 @@ export default function ResultScreen() {
           {scan.brand && <Text style={styles.brandName}>{scan.brand}</Text>}
         </View>
 
-        {/* Primary 5-Second Status Card */}
+        {/* Primary Status Card with Personalized Guidance Score */}
         <Card variant="elevated" style={styles.statusCard}>
           <StatusBadge status={scan.assessmentStatus} size="lg" style={styles.badgeCenter} />
 
-          {/* Friendly AI / Heuristic Summary */}
+          <View style={styles.scoreContainer}>
+            <Text style={styles.scoreValue}>{score}</Text>
+            <Text style={styles.scoreMax}>/ 100</Text>
+          </View>
+          <Text style={styles.scoreLabel}>{t('guidance_score_label')}</Text>
+          <Text style={styles.scoreSub}>{t('guidance_score_sub')}</Text>
+
+          {/* Heuristic Summary */}
           <Text style={styles.summaryText}>
             {language === 'ml'
               ? scan.aiExplanationMl || scan.reasons[0]?.messageMl
@@ -100,7 +106,7 @@ export default function ResultScreen() {
           </Text>
         </Card>
 
-        {/* Allergen Warning Banner (If Present) */}
+        {/* Biological Allergen Hazard Banner (If Present) */}
         {scan.allergenWarnings.map((a, idx) => (
           <AllergenWarningBanner
             key={idx}
@@ -109,7 +115,16 @@ export default function ResultScreen() {
           />
         ))}
 
-        {/* "Why?" Reasons Section */}
+        {/* Missing Nutrition Data Warning (If Present) */}
+        {scan.reasons.length === 0 && (!nutrition.sodiumMg || !nutrition.addedSugarsG) && (
+          <Card variant="outlined" style={styles.missingDataCard}>
+            <Text style={styles.missingDataText}>
+              ℹ️ {t('missing_data_notice')}
+            </Text>
+          </Card>
+        )}
+
+        {/* "Why?" Reasons Section with Source Metadata */}
         {scan.reasons.length > 0 && (
           <Card variant="default" style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>{t('why_title')}</Text>
@@ -124,6 +139,11 @@ export default function ResultScreen() {
                   </Text>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.reasonMessage}>{msg}</Text>
+                    {reason.source && (
+                      <Text style={styles.sourceTag}>
+                        Ref: {reason.source} ({reason.classification || 'Heuristic'})
+                      </Text>
+                    )}
                     {advice && <Text style={styles.reasonAdvice}>💡 {advice}</Text>}
                   </View>
                 </View>
@@ -140,16 +160,16 @@ export default function ResultScreen() {
           </View>
 
           <View style={styles.table}>
-            <NutritionRow label="Energy / Calories" value={`${nutrition.energyKcal ?? '--'} kcal`} />
-            <NutritionRow label="Total Carbohydrates" value={`${nutrition.carbohydratesG ?? '--'} g`} />
-            <NutritionRow label="Total Sugars" value={`${nutrition.sugarsG ?? '--'} g`} highlight={Boolean((nutrition.sugarsG ?? 0) > 15)} />
-            <NutritionRow label="Added Sugars" value={`${nutrition.addedSugarsG ?? '--'} g`} highlight={Boolean((nutrition.addedSugarsG ?? 0) >= 10)} />
-            <NutritionRow label="Protein" value={`${nutrition.proteinG ?? '--'} g`} />
-            <NutritionRow label="Total Fat" value={`${nutrition.fatG ?? '--'} g`} />
-            <NutritionRow label="Saturated Fat" value={`${nutrition.saturatedFatG ?? '--'} g`} highlight={Boolean((nutrition.saturatedFatG ?? 0) >= 5)} />
-            <NutritionRow label="Trans Fat" value={`${nutrition.transFatG ?? '0'} g`} highlight={Boolean((nutrition.transFatG ?? 0) > 0.1)} />
-            <NutritionRow label="Dietary Fibre" value={`${nutrition.fibreG ?? '--'} g`} />
-            <NutritionRow label="Sodium" value={`${nutrition.sodiumMg ?? '--'} mg`} highlight={Boolean((nutrition.sodiumMg ?? 0) >= 500)} />
+            <NutritionRow label="Energy / Calories" value={nutrition.energyKcal != null ? `${nutrition.energyKcal} kcal` : 'UNKNOWN'} />
+            <NutritionRow label="Total Carbohydrates" value={nutrition.carbohydratesG != null ? `${nutrition.carbohydratesG} g` : 'UNKNOWN'} />
+            <NutritionRow label="Total Sugars" value={nutrition.sugarsG != null ? `${nutrition.sugarsG} g` : 'UNKNOWN'} highlight={Boolean((nutrition.sugarsG ?? 0) >= 15)} />
+            <NutritionRow label="Added Sugars" value={nutrition.addedSugarsG != null ? `${nutrition.addedSugarsG} g` : 'UNKNOWN'} highlight={Boolean((nutrition.addedSugarsG ?? 0) >= 10)} />
+            <NutritionRow label="Protein" value={nutrition.proteinG != null ? `${nutrition.proteinG} g` : 'UNKNOWN'} />
+            <NutritionRow label="Total Fat" value={nutrition.fatG != null ? `${nutrition.fatG} g` : 'UNKNOWN'} />
+            <NutritionRow label="Saturated Fat" value={nutrition.saturatedFatG != null ? `${nutrition.saturatedFatG} g` : 'UNKNOWN'} highlight={Boolean((nutrition.saturatedFatG ?? 0) >= 5)} />
+            <NutritionRow label="Trans Fat" value={nutrition.transFatG != null ? `${nutrition.transFatG} g` : 'UNKNOWN'} highlight={Boolean((nutrition.transFatG ?? 0) > 0.1)} />
+            <NutritionRow label="Dietary Fibre" value={nutrition.fibreG != null ? `${nutrition.fibreG} g` : 'UNKNOWN'} />
+            <NutritionRow label="Sodium" value={nutrition.sodiumMg != null ? `${nutrition.sodiumMg} mg` : 'UNKNOWN'} highlight={Boolean((nutrition.sodiumMg ?? 0) >= 600)} />
           </View>
         </Card>
 
@@ -211,117 +231,158 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   loadingText: {
+    marginTop: spacing.md,
     ...typography.body,
     color: colors.textSecondary,
-    marginTop: spacing.md,
   },
   errorText: {
-    ...typography.bodyLarge,
+    ...typography.h3,
     color: colors.error,
     marginBottom: spacing.md,
   },
   content: {
     padding: spacing.md,
-    paddingBottom: spacing.xxl,
   },
   productHeader: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   productName: {
-    ...typography.h1,
-    fontSize: 22,
+    ...typography.h2,
     color: colors.textPrimary,
   },
   brandName: {
     ...typography.body,
     color: colors.textSecondary,
-    marginTop: 2,
   },
   statusCard: {
-    padding: spacing.lg,
     alignItems: 'center',
+    paddingVertical: spacing.lg,
     marginBottom: spacing.md,
   },
   badgeCenter: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  scoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginVertical: spacing.xs,
+  },
+  scoreValue: {
+    ...typography.h1,
+    fontSize: 42,
+    color: colors.primary,
+    fontWeight: 'bold',
+  },
+  scoreMax: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginLeft: 4,
+  },
+  scoreLabel: {
+    ...typography.bodySmall,
+    fontWeight: 'bold',
+    color: colors.textPrimary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  scoreSub: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 2,
+    paddingHorizontal: spacing.md,
   },
   summaryText: {
-    ...typography.bodyLarge,
+    ...typography.body,
     color: colors.textPrimary,
     textAlign: 'center',
-    lineHeight: 22,
-    fontWeight: '500',
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.sm,
+  },
+  missingDataCard: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+    marginBottom: spacing.md,
+    padding: spacing.md,
+  },
+  missingDataText: {
+    ...typography.bodySmall,
+    color: '#1E40AF',
+    lineHeight: 18,
   },
   sectionCard: {
     marginBottom: spacing.md,
   },
   sectionTitle: {
     ...typography.h3,
-    fontSize: 16,
     color: colors.textPrimary,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   reasonItem: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   reasonBullet: {
-    fontSize: 14,
+    fontSize: 16,
     marginRight: spacing.sm,
-    marginTop: 2,
   },
   reasonMessage: {
     ...typography.body,
     color: colors.textPrimary,
-    fontWeight: '600',
-    lineHeight: 20,
+  },
+  sourceTag: {
+    ...typography.bodySmall,
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
+  sourceAdvice: {
+    ...typography.bodySmall,
+    color: colors.primary,
+    marginTop: 4,
   },
   reasonAdvice: {
     ...typography.bodySmall,
-    color: colors.goodText,
-    marginTop: 3,
-    lineHeight: 18,
+    color: colors.primary,
+    marginTop: 4,
   },
   nutritionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
   per100gText: {
-    fontSize: 12,
+    ...typography.bodySmall,
     color: colors.textSecondary,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   table: {
     borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
+    borderColor: colors.border,
   },
   nutritionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    borderColor: colors.border,
   },
   nutritionRowHighlight: {
-    backgroundColor: colors.cautionBg,
-    paddingHorizontal: 6,
-    borderRadius: borderRadius.sm,
+    backgroundColor: '#FEF2F2',
   },
   nutrientLabel: {
-    fontSize: 14,
-    color: colors.textSecondary,
+    ...typography.body,
+    color: colors.textPrimary,
   },
   nutrientValue: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...typography.body,
+    fontWeight: 'bold',
     color: colors.textPrimary,
   },
   nutrientHighlightText: {
-    color: colors.cautionText,
-    fontWeight: '700',
+    color: colors.error,
   },
   actionButtonsContainer: {
     marginVertical: spacing.md,

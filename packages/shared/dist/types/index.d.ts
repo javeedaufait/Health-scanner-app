@@ -3,6 +3,7 @@ export type DietaryPreferenceCode = 'none' | 'vegetarian' | 'vegan' | 'eggetaria
 export type AllergenRestrictionCode = 'milk' | 'lactose' | 'peanut' | 'tree_nuts' | 'soy' | 'wheat_gluten' | 'egg' | 'fish' | 'shellfish' | 'sesame';
 export type AssessmentStatus = 'GOOD_CHOICE' | 'USE_CAUTION' | 'NOT_A_GOOD_CHOICE';
 export type SeverityLevel = 'low' | 'moderate' | 'high' | 'critical';
+export type RuleClassification = 'DIRECTLY_SUPPORTED' | 'INDIRECTLY_SUPPORTED' | 'HEURISTIC' | 'UNSUPPORTED' | 'CLINICAL_REVIEW_REQUIRED';
 export interface HealthCondition {
     code: HealthConditionCode;
     nameEn: string;
@@ -76,8 +77,13 @@ export interface Product {
     sourceConfidence: number;
 }
 export interface EvaluationReason {
+    ruleId?: string;
     conditionCode: string;
     nutrient: string;
+    threshold?: number;
+    unit?: string;
+    classification?: RuleClassification;
+    source?: string;
     severity: SeverityLevel;
     messageEn: string;
     messageMl: string;
@@ -93,13 +99,17 @@ export interface AllergenWarning {
 }
 export interface RuleEvaluationResult {
     status: AssessmentStatus;
+    personalizedGuidanceScore: number;
     score: number;
     reasons: EvaluationReason[];
     allergenWarnings: AllergenWarning[];
+    hasAllergenHazard: boolean;
+    kidneyAdvisoryEn?: string;
+    kidneyAdvisoryMl?: string;
     overallSummaryEn: string;
     overallSummaryMl: string;
     isMissingNutritionData: boolean;
-    missingFields?: string[];
+    missingFields: string[];
 }
 export interface HealthRule {
     id: string;
@@ -108,6 +118,9 @@ export interface HealthRule {
     basis: 'per_100g' | 'per_serving';
     operator: '>' | '>=' | '<' | '<=';
     threshold: number;
+    unit: 'g' | 'mg' | 'kcal';
+    classification: RuleClassification;
+    source: string;
     severity: SeverityLevel;
     deduction: number;
     messageEn: string;
@@ -125,6 +138,7 @@ export interface ScanRecord {
     scanType: 'barcode' | 'ocr_label';
     assessmentStatus: AssessmentStatus;
     score: number;
+    personalizedGuidanceScore?: number;
     reasons: EvaluationReason[];
     allergenWarnings: AllergenWarning[];
     nutritionSnapshot: NutritionValues;

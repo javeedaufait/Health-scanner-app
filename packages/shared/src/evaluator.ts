@@ -45,37 +45,40 @@ export function evaluateFoodForUser(input: EvaluateFoodInput): RuleEvaluationRes
   const userPreferences = userProfile.dietaryPreferences || ['none'];
   const customRestrictions = userProfile.customRestrictions || [];
 
-  let baseScore = 100;
-  const reasons: EvaluationReason[] = [];
   const allergenWarnings: AllergenWarning[] = [];
+  const reasons: EvaluationReason[] = [];
   const missingFields: string[] = [];
 
-  // Check data completeness
+  // Check missing nutrition fields (null or undefined)
   const keyFields: (keyof NutritionValues)[] = [
     'energyKcal',
     'carbohydratesG',
     'sugarsG',
+    'addedSugarsG',
     'proteinG',
     'fatG',
+    'saturatedFatG',
+    'transFatG',
     'sodiumMg',
   ];
+
   for (const field of keyFields) {
     if (productNutrition[field] === null || productNutrition[field] === undefined) {
       missingFields.push(field);
     }
   }
 
-  // 1. ALLERGEN & DIETARY RESTRICTION EVALUATION
+  // =========================================================================
+  // PATH 1: ALLERGEN & BIOLOGICAL SAFETY ENGINE (Independent Safety Warnings)
+  // =========================================================================
   for (const allergen of userAllergens) {
     const allergenKeywords = ALLERGEN_KEYWORD_MAP[allergen] || [allergen.toLowerCase()];
     let matchedIngredient: string | null = null;
 
-    // Check detected allergens tag
     if (detectedAllergens.includes(allergen)) {
       matchedIngredient = allergen;
     }
 
-    // Check ingredients list
     if (!matchedIngredient && ingredientsList.length > 0) {
       for (const ingredient of ingredientsList) {
         const lower = ingredient.toLowerCase();
@@ -98,15 +101,13 @@ export function evaluateFoodForUser(input: EvaluateFoodInput): RuleEvaluationRes
         allergen,
         matchedIngredient,
         isDefinite: true,
-        messageEn: `Contains ${nameEn}, which matches your marked restriction.`,
-        messageMl: `നിങ്ങൾ ഒഴിവാക്കാൻ തിരഞ്ഞെടുത്ത ${nameMl} ഇതിൽ അടങ്ങിയിരിക്കുന്നു.`,
+        messageEn: `Safety Warning: Contains ${nameEn}, matching your allergen restriction.`,
+        messageMl: `മുന്നറിയിപ്പ്: നിങ്ങൾ ഒഴിവാക്കാൻ ആഗ്രഹിച്ച ${nameMl} ഇതിൽ അടങ്ങിയിരിക്കുന്നു.`,
       });
-
-      baseScore -= 45;
     }
   }
 
-  // Check custom user restrictions
+  // Custom ingredient restrictions
   for (const customRest of customRestrictions) {
     const trimmed = customRest.trim().toLowerCase();
     if (!trimmed) continue;
@@ -117,16 +118,15 @@ export function evaluateFoodForUser(input: EvaluateFoodInput): RuleEvaluationRes
           allergen: customRest,
           matchedIngredient: ingredient.trim(),
           isDefinite: true,
-          messageEn: `Contains "${ingredient.trim()}", which matches your custom restriction "${customRest}".`,
-          messageMl: `നിങ്ങളുടെ പ്രത്യേക നിർദ്ദേശമായ "${customRest}" ഇതിൽ അടങ്ങിയിരിക്കുന്നു (${ingredient.trim()}).`,
+          messageEn: `Custom Restriction: Contains "${ingredient.trim()}", matching your entry "${customRest}".`,
+          messageMl: `നിങ്ങളുടെ നിർദ്ദേശമായ "${customRest}" ഇതിൽ അടങ്ങിയിരിക്കുന്നു (${ingredient.trim()}).`,
         });
-        baseScore -= 35;
         break;
       }
     }
   }
 
-  // Vegetarian / Vegan checks
+  // Vegetarian / Vegan preferences
   if (userPreferences.includes('vegan') || userPreferences.includes('vegetarian')) {
     const nonVegKeywords = ['chicken', 'mutton', 'beef', 'pork', 'meat', 'gelatin', 'fish', 'prawn', 'crab', 'egg', 'lard'];
     if (userPreferences.includes('vegan')) {
@@ -141,30 +141,32 @@ export function evaluateFoodForUser(input: EvaluateFoodInput): RuleEvaluationRes
             allergen: userPreferences.includes('vegan') ? 'vegan_mismatch' : 'vegetarian_mismatch',
             matchedIngredient: ingredient.trim(),
             isDefinite: true,
-            messageEn: `Contains non-plant/non-vegetarian ingredient: ${ingredient.trim()}`,
+            messageEn: `Dietary Preference Alert: Contains non-plant/non-vegetarian ingredient (${ingredient.trim()}).`,
             messageMl: `സസ്യഭക്ഷണത്തിന് അനുയോജ്യമല്ലാത്ത ചേരുവ അടങ്ങിയിരിക്കുന്നു: ${ingredient.trim()}`,
           });
-          baseScore -= 40;
           break;
         }
       }
     }
   }
 
-  // 2. HEALTH CONDITIONS HEURISTIC EVALUATION
+  const hasAllergenHazard = allergenWarnings.length > 0;
+
+  // =========================================================================
+  // PATH 2: NUTRIENT GUIDANCE ENGINE (Personalized Guidance Score 0–100)
+  // =========================================================================
+  let baseScore = 100;
+  let kidneyAdvisoryEn: string | undefined;
+  let kidneyAdvisoryMl: string | undefined;
+
   const activeRules = customRules.filter((r) => r.isActive);
 
   for (const condition of userConditions) {
     if (condition === 'none') continue;
 
     if (condition === 'kidney_disease') {
-      reasons.push({
-        conditionCode: 'kidney_disease',
-        nutrient: 'all',
-        severity: 'high',
-        messageEn: 'Kidney disease requires specialized clinical consultation. Always verify with your nephrologist/dietitian.',
-        messageMl: 'വൃക്കരോഗമുള്ളവർ ഭക്ഷണ തിരഞ്ഞെടുപ്പുകൾക്ക് ഡോക്ടറുടെ പ്രത്യേക നിർദ്ദേശം തേടേണ്ടതാണ്.',
-      });
+      kidneyAdvisoryEn = 'Kidney disease requires personalized clinical management. Please consult your nephrologist or renal dietitian for specialized dietary limits.';
+      kidneyAdvisoryMl = 'വൃക്കരോഗമുള്ളവർ ഭക്ഷണ കാര്യങ്ങളിൽ ഡോക്ടറുടെയോ ഡയറ്റീഷ്യന്റെയോ വ്യക്തിഗത നിർദ്ദേശങ്ങൾ സ്വീകരിക്കേണ്ടതാണ്.';
       continue;
     }
 
@@ -173,18 +175,18 @@ export function evaluateFoodForUser(input: EvaluateFoodInput): RuleEvaluationRes
         conditionCode: 'other',
         nutrient: 'general',
         severity: 'low',
-        messageEn: 'We currently do not have validated heuristics for custom unlisted conditions. Please check with your doctor.',
-        messageMl: 'ലിസ്റ്റ് ചെയ്യാത്ത മറ്റ് അസുഖങ്ങൾക്ക് പ്രത്യേക മാർഗ്ഗനിർദ്ദേശങ്ങൾ ലഭ്യമല്ല.',
+        messageEn: 'Unlisted condition selected. Please review nutrient values with your physician.',
+        messageMl: 'ലിസ്റ്റ് ചെയ്യാത്ത മറ്റ് ആരോഗ്യ പ്രൊഫൈലുകൾക്ക് ഡോക്ടറുടെ സേവനം തേടുക.',
       });
       continue;
     }
 
-    // Evaluate rules for this condition
     const conditionRules = activeRules.filter((r) => r.conditionCode === condition);
 
     for (const rule of conditionRules) {
       const nutrientValue = productNutrition[rule.nutrient];
       if (nutrientValue === null || nutrientValue === undefined) {
+        // Skip missing nutrient values (treated as UNKNOWN, no false score penalty)
         continue;
       }
 
@@ -209,65 +211,75 @@ export function evaluateFoodForUser(input: EvaluateFoodInput): RuleEvaluationRes
           (r) => r.conditionCode === condition && r.nutrient === rule.nutrient
         );
         if (existingIdx >= 0) {
-          if (rule.deduction > (reasons[existingIdx] as any).deduction) {
-            baseScore -= (rule.deduction - (reasons[existingIdx] as any).deduction);
+          const prevDeduction = (reasons[existingIdx] as any).deduction || 0;
+          if (rule.deduction > prevDeduction) {
+            baseScore -= (rule.deduction - prevDeduction);
             reasons[existingIdx] = {
+              ruleId: rule.id,
               conditionCode: rule.conditionCode,
               nutrient: String(rule.nutrient),
+              threshold: rule.threshold,
+              unit: rule.unit,
+              classification: rule.classification,
+              source: rule.source,
               severity: rule.severity,
               messageEn: rule.messageEn,
               messageMl: rule.messageMl,
               betterChoiceAdviceEn: rule.adviceEn,
               betterChoiceAdviceMl: rule.adviceMl,
+              ...({ deduction: rule.deduction } as any),
             };
           }
         } else {
           baseScore -= rule.deduction;
           reasons.push({
+            ruleId: rule.id,
             conditionCode: rule.conditionCode,
             nutrient: String(rule.nutrient),
+            threshold: rule.threshold,
+            unit: rule.unit,
+            classification: rule.classification,
+            source: rule.source,
             severity: rule.severity,
             messageEn: rule.messageEn,
             messageMl: rule.messageMl,
             betterChoiceAdviceEn: rule.adviceEn,
             betterChoiceAdviceMl: rule.adviceMl,
+            ...({ deduction: rule.deduction } as any),
           });
         }
       }
     }
   }
 
-  // 3. SCORE CLAMPING & STATUS ASSIGNMENT
-  const finalScore = Math.max(0, Math.min(100, Math.round(baseScore)));
+  const personalizedGuidanceScore = Math.max(0, Math.min(100, Math.round(baseScore)));
 
-  const hasCriticalAllergen = allergenWarnings.some((a) => a.isDefinite);
   const hasCriticalReason = reasons.some((r) => r.severity === 'critical');
   const hasHighReason = reasons.some((r) => r.severity === 'high');
 
   let status: 'GOOD_CHOICE' | 'USE_CAUTION' | 'NOT_A_GOOD_CHOICE';
 
-  if (hasCriticalAllergen || finalScore < 50) {
+  if (hasAllergenHazard || personalizedGuidanceScore < 50) {
     status = 'NOT_A_GOOD_CHOICE';
-  } else if (hasCriticalReason || hasHighReason || finalScore < 80) {
+  } else if (hasCriticalReason || hasHighReason || personalizedGuidanceScore < 80) {
     status = 'USE_CAUTION';
   } else {
     status = 'GOOD_CHOICE';
   }
 
-  // 4. OVERALL SUMMARY GENERATION
   let overallSummaryEn = '';
   let overallSummaryMl = '';
 
   if (status === 'NOT_A_GOOD_CHOICE') {
-    if (hasCriticalAllergen) {
-      overallSummaryEn = 'Contains ingredients matching your allergen/dietary restrictions. Not recommended.';
-      overallSummaryMl = 'നിങ്ങൾ ഒഴിവാക്കാൻ ആഗ്രഹിച്ച ചേരുവകൾ ഇതിൽ അടങ്ങിയിരിക്കുന്നു. ഇത് ഉപയോഗിക്കാതിരിക്കാൻ ശ്രദ്ധിക്കുക.';
+    if (hasAllergenHazard) {
+      overallSummaryEn = 'Allergen / dietary restriction hazard detected. Not recommended for your safety.';
+      overallSummaryMl = 'നിങ്ങൾ ഒഴിവാക്കാൻ തിരഞ്ഞെടുത്ത ചേരുവകൾ ഇതിൽ അടങ്ങിയിരിക്കുന്നു. ഇത് ഒഴിവാക്കാൻ ശ്രദ്ധിക്കുക.';
     } else {
-      overallSummaryEn = 'Nutrient levels may not be suitable for your health profile goals. Look for healthier alternatives.';
-      overallSummaryMl = 'നിങ്ങളുടെ ആരോഗ്യ ആവശ്യങ്ങൾക്ക് ഈ ഉൽപ്പന്നം അനുയോജ്യമല്ല. കുറഞ്ഞ പഞ്ചസാരയും ഉപ്പുമുള്ള മറ്റ് ഉൽപ്പന്നങ്ങൾ തിരഞ്ഞെടുക്കുക.';
+      overallSummaryEn = 'Nutrient levels exceed target limits for your selected health profile.';
+      overallSummaryMl = 'നിങ്ങളുടെ ആരോഗ്യ ആവശ്യങ്ങൾക്ക് ഈ ഉൽപ്പന്നത്തിലെ പോഷകങ്ങളുടെ അളവ് അനുയോജ്യമല്ല.';
     }
   } else if (status === 'USE_CAUTION') {
-    overallSummaryEn = 'Contains some nutrients to consume in moderation based on your health profile.';
+    overallSummaryEn = 'Contains specific nutrients to consume in moderation according to your selected goals.';
     overallSummaryMl = 'നിങ്ങളുടെ ആരോഗ്യ പ്രൊഫൈൽ അനുസരിച്ച് ഇത് മിതമായ അളവിൽ മാത്രം ഉപയോഗിക്കുക.';
   } else {
     overallSummaryEn = 'Fits well with your health profile and dietary preferences.';
@@ -276,12 +288,16 @@ export function evaluateFoodForUser(input: EvaluateFoodInput): RuleEvaluationRes
 
   return {
     status,
-    score: finalScore,
+    personalizedGuidanceScore,
+    score: personalizedGuidanceScore, // Alias for UI components
     reasons,
     allergenWarnings,
+    hasAllergenHazard,
+    kidneyAdvisoryEn,
+    kidneyAdvisoryMl,
     overallSummaryEn,
     overallSummaryMl,
-    isMissingNutritionData: missingFields.length > 2,
+    isMissingNutritionData: missingFields.length > 0,
     missingFields,
   };
 }

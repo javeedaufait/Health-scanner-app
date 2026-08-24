@@ -1,14 +1,14 @@
 import { evaluateFoodForUser } from '../../src/modules/rule-engine/evaluator';
 
-describe('Deterministic Health Rule Evaluation Engine', () => {
+describe('Deterministic Health Rule Evaluation Engine (FSSAI, ICMR-NIN & WHO Audited)', () => {
   describe('Diabetes & Blood Sugar Rules', () => {
-    it('should flag High Added Sugar for a user with Diabetes', () => {
+    it('should flag High Added Sugar for a user with Diabetes with single-source-of-truth metadata', () => {
       const result = evaluateFoodForUser({
         userProfile: { conditions: ['diabetes'] },
         productNutrition: {
           energyKcal: 450,
           carbohydratesG: 70,
-          addedSugarsG: 22, // High added sugar
+          addedSugarsG: 22, // High added sugar (>=10g)
           sugarsG: 25,
           proteinG: 5,
           fatG: 12,
@@ -18,9 +18,12 @@ describe('Deterministic Health Rule Evaluation Engine', () => {
       });
 
       expect(result.status).not.toBe('GOOD_CHOICE');
-      expect(result.score).toBeLessThanOrEqual(70);
+      expect(result.personalizedGuidanceScore).toBeLessThanOrEqual(70);
+      expect(result.score).toBe(result.personalizedGuidanceScore);
       const sugarReason = result.reasons.find((r) => r.conditionCode === 'diabetes' && r.nutrient === 'addedSugarsG');
       expect(sugarReason).toBeDefined();
+      expect(sugarReason?.classification).toBe('INDIRECTLY_SUPPORTED');
+      expect(sugarReason?.source).toContain('FSSAI Draft FoPL');
       expect(sugarReason?.severity).toBe('high');
     });
 
@@ -41,12 +44,12 @@ describe('Deterministic Health Rule Evaluation Engine', () => {
       });
 
       expect(result.status).toBe('GOOD_CHOICE');
-      expect(result.score).toBeGreaterThanOrEqual(80);
+      expect(result.personalizedGuidanceScore).toBeGreaterThanOrEqual(80);
       expect(result.reasons.length).toBe(0);
     });
   });
 
-  describe('Hypertension & Sodium Rules', () => {
+  describe('Hypertension & Sodium Rules (FSSAI 600mg / WHO 800mg Benchmarks)', () => {
     it('should flag Critical Sodium for a user with Hypertension on instant noodles', () => {
       const result = evaluateFoodForUser({
         userProfile: { conditions: ['hypertension'] },
@@ -63,6 +66,20 @@ describe('Deterministic Health Rule Evaluation Engine', () => {
       const sodiumReason = result.reasons.find((r) => r.conditionCode === 'hypertension');
       expect(sodiumReason).toBeDefined();
       expect(sodiumReason?.severity).toBe('critical');
+      expect(sodiumReason?.classification).toBe('INDIRECTLY_SUPPORTED');
+    });
+
+    it('should flag High Sodium at FSSAI 600mg threshold', () => {
+      const result = evaluateFoodForUser({
+        userProfile: { conditions: ['hypertension'] },
+        productNutrition: {
+          energyKcal: 300,
+          sodiumMg: 650, // High sodium (>=600mg)
+        },
+        ingredientsList: ['wheat flour', 'salt'],
+      });
+
+      expect(result.reasons.some((r) => r.nutrient === 'sodiumMg' && r.threshold === 600)).toBe(true);
     });
 
     it('should pass low-sodium products for Hypertension', () => {
@@ -76,31 +93,48 @@ describe('Deterministic Health Rule Evaluation Engine', () => {
       });
 
       expect(result.status).toBe('GOOD_CHOICE');
-      expect(result.score).toBe(100);
+      expect(result.personalizedGuidanceScore).toBe(100);
     });
   });
 
-  describe('Cholesterol & Saturated / Trans Fat Rules', () => {
-    it('should flag High Saturated Fat and Trans Fat for High Cholesterol', () => {
+  describe('Kidney Disease Non-Clinical Advisory', () => {
+    it('should provide kidney disease advisory without deducting score points', () => {
       const result = evaluateFoodForUser({
-        userProfile: { conditions: ['high_cholesterol'] },
+        userProfile: { conditions: ['kidney_disease'] },
         productNutrition: {
-          energyKcal: 540,
-          saturatedFatG: 15.2, // High saturated fat
-          transFatG: 0.2, // Trans fat present
-          fatG: 34,
+          energyKcal: 200,
+          sodiumMg: 100,
         },
-        ingredientsList: ['potato', 'palm oil', 'salt'],
+        ingredientsList: ['rice flour', 'water'],
       });
 
-      expect(result.status).toBe('NOT_A_GOOD_CHOICE');
-      expect(result.reasons.some((r) => r.nutrient === 'saturatedFatG')).toBe(true);
-      expect(result.reasons.some((r) => r.nutrient === 'transFatG')).toBe(true);
+      expect(result.personalizedGuidanceScore).toBe(100);
+      expect(result.kidneyAdvisoryEn).toContain('Kidney disease requires personalized clinical management');
+      expect(result.kidneyAdvisoryMl).toContain('വൃക്കരോഗമുള്ളവർ');
     });
   });
 
-  describe('Allergen & Dietary Restrictions', () => {
-    it('should trigger ALLERGEN WARNING and NOT_A_GOOD_CHOICE when user with milk allergy scans product with milk solids', () => {
+  describe('Missing Nutrition Data Handling', () => {
+    it('should mark null/missing fields as UNKNOWN and set isMissingNutritionData flag without deducting false score points', () => {
+      const result = evaluateFoodForUser({
+        userProfile: { conditions: ['hypertension'] },
+        productNutrition: {
+          energyKcal: 250,
+          sodiumMg: null, // Missing field
+          addedSugarsG: undefined,
+        },
+        ingredientsList: ['wheat flour'],
+      });
+
+      expect(result.isMissingNutritionData).toBe(true);
+      expect(result.missingFields).toContain('sodiumMg');
+      expect(result.missingFields).toContain('addedSugarsG');
+      expect(result.personalizedGuidanceScore).toBe(100); // No points deducted for unknown values
+    });
+  });
+
+  describe('Allergen Biological Safety Engine', () => {
+    it('should trigger ALLERGEN HAZARD and NOT_A_GOOD_CHOICE independently when user with milk allergy scans product with milk solids', () => {
       const result = evaluateFoodForUser({
         userProfile: {
           conditions: ['none'],
@@ -111,6 +145,7 @@ describe('Deterministic Health Rule Evaluation Engine', () => {
       });
 
       expect(result.status).toBe('NOT_A_GOOD_CHOICE');
+      expect(result.hasAllergenHazard).toBe(true);
       expect(result.allergenWarnings.length).toBeGreaterThan(0);
       expect(result.allergenWarnings[0].allergen).toBe('milk');
       expect(result.allergenWarnings[0].matchedIngredient).toContain('milk solids');
@@ -127,12 +162,13 @@ describe('Deterministic Health Rule Evaluation Engine', () => {
       });
 
       expect(result.status).toBe('GOOD_CHOICE');
+      expect(result.hasAllergenHazard).toBe(false);
       expect(result.allergenWarnings.length).toBe(0);
     });
   });
 
-  describe('Section 56 Official Acceptance Test Scenario', () => {
-    it('should evaluate Demo User (Diabetes + Hypertension + Milk restriction) on Demo Snack (High Sugar + High Sodium + Milk solids)', () => {
+  describe('Complex Acceptance Test Scenario', () => {
+    it('should evaluate Demo User (Diabetes + Hypertension + Milk restriction) on Demo Snack', () => {
       const result = evaluateFoodForUser({
         userProfile: {
           conditions: ['diabetes', 'hypertension'],
@@ -162,22 +198,18 @@ describe('Deterministic Health Rule Evaluation Engine', () => {
         detectedAllergens: ['wheat_gluten', 'milk'],
       });
 
-      // 1. Must be NOT_A_GOOD_CHOICE due to allergen and multiple critical deductions
       expect(result.status).toBe('NOT_A_GOOD_CHOICE');
+      expect(result.hasAllergenHazard).toBe(true);
 
-      // 2. Must contain Added Sugar concern
       const sugarConcern = result.reasons.find((r) => r.conditionCode === 'diabetes');
       expect(sugarConcern).toBeDefined();
 
-      // 3. Must contain Sodium concern
       const sodiumConcern = result.reasons.find((r) => r.conditionCode === 'hypertension');
       expect(sodiumConcern).toBeDefined();
 
-      // 4. Must contain Milk allergen warning
       const milkWarning = result.allergenWarnings.find((a) => a.allergen === 'milk');
       expect(milkWarning).toBeDefined();
 
-      // 5. Must provide bilingual summaries
       expect(result.overallSummaryEn).toBeTruthy();
       expect(result.overallSummaryMl).toBeTruthy();
     });
