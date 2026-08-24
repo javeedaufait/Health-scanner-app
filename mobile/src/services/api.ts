@@ -524,10 +524,14 @@ class LocalApiClient {
 
     for (const url of endpoints) {
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
         const res = await fetch(url, {
           headers: { 'User-Agent': 'AIFoodScanner-Kerala-MVP/1.0' },
-          signal: AbortSignal.timeout(8000),
+          signal: controller.signal,
         });
+        clearTimeout(timeoutId);
 
         if (res.ok) {
           const data = await res.json() as any;
@@ -538,8 +542,8 @@ class LocalApiClient {
             return { found: true, product };
           }
         }
-      } catch {
-        // Try next cluster
+      } catch (err) {
+        console.warn(`OpenFoodFacts fetch error for ${url}:`, err);
       }
     }
 
