@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import {
   UserProfile,
   Product,
@@ -12,13 +13,57 @@ import { DEMO_PRESETS } from './demo-products';
 
 // Storage Keys for 100% Local On-Device Persistence
 const STORAGE_KEYS = {
-  USER_SESSION: '@health_user_session',
+  USER_SESSION: 'health_user_session',
   USER_PROFILE: '@health_user_profile',
   SCAN_HISTORY: '@health_scan_history',
   SAVED_PRODUCTS: '@health_saved_products',
   CUSTOM_PRODUCTS: '@health_custom_products',
-  RESET_CODES: '@health_reset_codes',
+  RESET_CODES: 'health_reset_codes',
+  USER_CREDENTIALS: 'health_user_credentials',
 };
+
+// Helper for Android Keystore / iOS Keychain hardware encryption
+async function saveSecure(key: string, value: string): Promise<void> {
+  try {
+    const isAvailable = await SecureStore.isAvailableAsync();
+    if (isAvailable) {
+      await SecureStore.setItemAsync(key, value, {
+        keychainService: 'health_scanner_keychain',
+      });
+      return;
+    }
+  } catch (e) {
+    console.warn('SecureStore save warning, falling back to AsyncStorage', e);
+  }
+  await AsyncStorage.setItem(`@${key}`, value);
+}
+
+async function getSecure(key: string): Promise<string | null> {
+  try {
+    const isAvailable = await SecureStore.isAvailableAsync();
+    if (isAvailable) {
+      const val = await SecureStore.getItemAsync(key, {
+        keychainService: 'health_scanner_keychain',
+      });
+      if (val !== null) return val;
+    }
+  } catch (e) {
+    console.warn('SecureStore read warning, falling back to AsyncStorage', e);
+  }
+  return AsyncStorage.getItem(`@${key}`);
+}
+
+async function deleteSecure(key: string): Promise<void> {
+  try {
+    const isAvailable = await SecureStore.isAvailableAsync();
+    if (isAvailable) {
+      await SecureStore.deleteItemAsync(key, {
+        keychainService: 'health_scanner_keychain',
+      });
+    }
+  } catch (e) {}
+  await AsyncStorage.removeItem(`@${key}`);
+}
 
 // Built-in verified product catalog for offline supermarket speed
 const SEED_PRODUCT_CATALOG: Record<string, Product> = {
@@ -275,13 +320,14 @@ class LocalApiClient {
       name: session.name,
     };
 
-    await AsyncStorage.setItem(STORAGE_KEYS.USER_SESSION, JSON.stringify(session));
+    await saveSecure(STORAGE_KEYS.USER_SESSION, JSON.stringify(session));
+    await saveSecure(STORAGE_KEYS.USER_CREDENTIALS, JSON.stringify({ email: session.email, name: session.name }));
     await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(initialProfile));
     return session;
   }
 
   async login(body: { email: string; password: string }) {
-    const existingStr = await AsyncStorage.getItem(STORAGE_KEYS.USER_SESSION);
+    const existingStr = await getSecure(STORAGE_KEYS.USER_SESSION);
     if (existingStr) {
       const session = JSON.parse(existingStr);
       return {
@@ -306,14 +352,15 @@ class LocalApiClient {
       name: session.name,
     };
 
-    await AsyncStorage.setItem(STORAGE_KEYS.USER_SESSION, JSON.stringify(session));
+    await saveSecure(STORAGE_KEYS.USER_SESSION, JSON.stringify(session));
+    await saveSecure(STORAGE_KEYS.USER_CREDENTIALS, JSON.stringify({ email: session.email, name: session.name }));
     await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(initialProfile));
     return session;
   }
 
   async forgotPassword(email: string) {
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    await AsyncStorage.setItem(STORAGE_KEYS.RESET_CODES, JSON.stringify({ email, resetCode }));
+    await saveSecure(STORAGE_KEYS.RESET_CODES, JSON.stringify({ email, resetCode, expiresAt: Date.now() + 15 * 60 * 1000 }));
     return {
       success: true,
       message: 'A 6-digit verification code has been generated.',
@@ -322,6 +369,7 @@ class LocalApiClient {
   }
 
   async resetPassword(body: { email: string; resetCode: string; newPassword: string }) {
+    await deleteSecure(STORAGE_KEYS.RESET_CODES);
     return {
       success: true,
       message: 'Password reset successfully! You can now log in.',
@@ -377,14 +425,16 @@ class LocalApiClient {
   }
 
   async deleteAccount() {
+    await deleteSecure(STORAGE_KEYS.USER_SESSION);
+    await deleteSecure(STORAGE_KEYS.USER_CREDENTIALS);
+    await deleteSecure(STORAGE_KEYS.RESET_CODES);
     await AsyncStorage.multiRemove([
-      STORAGE_KEYS.USER_SESSION,
       STORAGE_KEYS.USER_PROFILE,
       STORAGE_KEYS.SCAN_HISTORY,
       STORAGE_KEYS.SAVED_PRODUCTS,
       STORAGE_KEYS.CUSTOM_PRODUCTS,
     ]);
-    return { success: true, message: 'All local account data cleared.' };
+    return { success: true, message: 'All local account data and hardware keys cleared.' };
   }
 
   // --- Products & Barcode Lookup ---

@@ -37,7 +37,8 @@
         {
           "cameraPermission": "Allow AI Food Scanner to access camera to scan food labels and barcodes."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "scheme": "healthscanner",
     "extra": {
