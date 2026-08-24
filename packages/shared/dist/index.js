@@ -18,3 +18,4 @@ __exportStar(require("./types"), exports);
 __exportStar(require("./constants"), exports);
 __exportStar(require("./schemas"), exports);
 __exportStar(require("./evaluator"), exports);
+__exportStar(require("./comparator"), exports);

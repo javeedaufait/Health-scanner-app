@@ -16,6 +16,14 @@
   "nav_scan": "സ്കാൻ ചെയ്യുക",
   "nav_history": "ചരിത്രം",
   "nav_profile": "പ്രൊഫൈൽ",
+  "nav_compare": "ഉൽപ്പന്നങ്ങൾ താരതമ്യം ചെയ്യുക",
+
+  "compare_title": "ഉൽപ്പന്ന താരതമ്യം",
+  "best_pick": "നിങ്ങൾക്ക് ഏറ്റവും അനുയോജ്യമായത്",
+  "add_to_compare": "ഉൽപ്പന്നം ചേർക്കുക",
+  "compare_now": "താരതമ്യം ചെയ്യുക",
+  "compare_hint": "3 ഉൽപ്പന്നങ്ങൾ വരെ തിരഞ്ഞെടുത്ത് താരതമ്യം ചെയ്യാം",
+  "versus": "VS",
 
   "onboarding_step_1_title": "സ്വാഗതം",
   "onboarding_step_2_title": "기본 പ്രൊഫൈൽ",

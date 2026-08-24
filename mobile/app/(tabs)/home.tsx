@@ -84,6 +84,26 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
 
+        {/* Quick Action: Side-by-Side Product Comparison */}
+        <TouchableOpacity
+          style={[styles.heroScanCard, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0', marginBottom: spacing.md }]}
+          onPress={() => router.push('/compare' as any)}
+          activeOpacity={0.9}
+        >
+          <View style={styles.heroScanContent}>
+            <View style={[styles.scanIconCircle, { backgroundColor: '#DCFCE7' }]}>
+              <Text style={{ fontSize: 24 }}>⇄</Text>
+            </View>
+            <View style={styles.heroTextContainer}>
+              <Text style={[styles.heroTitle, { color: colors.primaryDark }]}>{t('nav_compare')}</Text>
+              <Text style={[styles.heroSubtitle, { color: colors.textSecondary }]}>
+                {t('compare_hint')}
+              </Text>
+            </View>
+            <Text style={[styles.heroArrow, { color: colors.primary }]}>→</Text>
+          </View>
+        </TouchableOpacity>
+
         {/* My Health Profile Summary Card */}
         <Card variant="elevated" style={styles.profileSummaryCard}>
           <View style={styles.cardHeaderRow}>

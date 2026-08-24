@@ -16,6 +16,14 @@
   "nav_scan": "Scan Food",
   "nav_history": "History",
   "nav_profile": "Profile",
+  "nav_compare": "Compare Products",
+
+  "compare_title": "Product Comparison",
+  "best_pick": "BEST PICK FOR YOU",
+  "add_to_compare": "Add to Compare",
+  "compare_now": "Compare Side-by-Side",
+  "compare_hint": "Select 2 or 3 products to evaluate side-by-side for your profile",
+  "versus": "VS",
 
   "onboarding_step_1_title": "Welcome",
   "onboarding_step_2_title": "Basic Profile",

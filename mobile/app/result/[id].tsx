@@ -172,6 +172,14 @@ export default function ResultScreen() {
 
           {scan.productId && (
             <Button
+              title="⇄ Compare with Another Product"
+              variant="secondary"
+              onPress={() => router.push(`/compare?ids=${scan.productId}` as any)}
+            />
+          )}
+
+          {scan.productId && (
+            <Button
               title={isSaved ? `✓ ${t('saved_to_favorites')}` : `⭐ ${t('save_to_favorites')}`}
               variant="outline"
               onPress={handleToggleSave}
