@@ -28,6 +28,22 @@ export const AllergenWarningBanner: React.FC<{ message: string; submessage?: str
   );
 };
 
+export const PrecautionaryTraceBanner: React.FC<{ message: string; submessage?: string }> = ({
+  message,
+  submessage,
+}) => {
+  return (
+    <View style={styles.precautionaryContainer}>
+      <View style={styles.allergenHeader}>
+        <Text style={styles.allergenIcon}>ℹ️</Text>
+        <Text style={styles.precautionaryTitle}>PRECAUTIONARY ALLERGEN NOTE</Text>
+      </View>
+      <Text style={styles.precautionaryText}>{message}</Text>
+      {submessage ? <Text style={styles.precautionarySubtext}>{submessage}</Text> : null}
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
@@ -85,6 +101,32 @@ const styles = StyleSheet.create({
   allergenSubtext: {
     fontSize: 12,
     color: colors.notGoodText,
+    marginTop: 4,
+    opacity: 0.9,
+  },
+  precautionaryContainer: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginVertical: spacing.sm,
+    borderWidth: 1.5,
+    borderColor: '#FDE68A',
+  },
+  precautionaryTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#92400E',
+    letterSpacing: 0.5,
+  },
+  precautionaryText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#78350F',
+    lineHeight: 18,
+  },
+  precautionarySubtext: {
+    fontSize: 11,
+    color: '#78350F',
     marginTop: 4,
     opacity: 0.9,
   },

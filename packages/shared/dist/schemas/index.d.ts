@@ -347,6 +347,7 @@ export declare const ProductSchema: z.ZodObject<{
     source: "internal" | "openfoodfacts" | "ocr_extracted";
     sourceConfidence: number;
     barcode?: string | undefined;
+    ingredientsText?: string | undefined;
     brand?: string | undefined;
     category?: string | undefined;
     servingSize?: string | undefined;
@@ -365,7 +366,6 @@ export declare const ProductSchema: z.ZodObject<{
         sodiumMg?: number | null | undefined;
         saltG?: number | null | undefined;
     } | undefined;
-    ingredientsText?: string | undefined;
 }, {
     ingredientsList: string[];
     detectedAllergens: ("milk" | "lactose" | "peanut" | "tree_nuts" | "soy" | "wheat_gluten" | "egg" | "fish" | "shellfish" | "sesame")[];
@@ -387,6 +387,7 @@ export declare const ProductSchema: z.ZodObject<{
     source: "internal" | "openfoodfacts" | "ocr_extracted";
     sourceConfidence: number;
     barcode?: string | undefined;
+    ingredientsText?: string | undefined;
     brand?: string | undefined;
     category?: string | undefined;
     servingSize?: string | undefined;
@@ -405,7 +406,6 @@ export declare const ProductSchema: z.ZodObject<{
         sodiumMg?: number | null | undefined;
         saltG?: number | null | undefined;
     } | undefined;
-    ingredientsText?: string | undefined;
 }>;
 export declare const EvaluateFoodRequestSchema: z.ZodObject<{
     productId: z.ZodOptional<z.ZodString>;

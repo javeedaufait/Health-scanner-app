@@ -18,6 +18,7 @@ import { StatusBadge } from '@/components/common/Badge';
 import {
   MedicalDisclaimerBanner,
   AllergenWarningBanner,
+  PrecautionaryTraceBanner,
 } from '@/components/common/DisclaimerBanner';
 import { colors, spacing, typography, borderRadius } from '@/theme';
 import { t } from '@/i18n';
@@ -100,12 +101,21 @@ export default function ResultScreen() {
           </Text>
         </Card>
 
-        {/* Allergen Warning Banner (If Present) */}
+        {/* Biological Allergen Hazard Banner (Definite Hazard) */}
         {scan.allergenWarnings.map((a, idx) => (
           <AllergenWarningBanner
             key={idx}
             message={language === 'ml' ? a.messageMl : a.messageEn}
             submessage={`Ingredient: ${a.matchedIngredient}`}
+          />
+        ))}
+
+        {/* Precautionary Allergen Traces Banner ("May Contain") */}
+        {scan.precautionaryTraces && scan.precautionaryTraces.map((pt, idx) => (
+          <PrecautionaryTraceBanner
+            key={idx}
+            message={language === 'ml' ? pt.messageMl : pt.messageEn}
+            submessage={`Matched: ${pt.matchedIngredient}`}
           />
         ))}
 
@@ -143,21 +153,28 @@ export default function ResultScreen() {
         {/* Nutrition Information Table */}
         <Card variant="default" style={styles.sectionCard}>
           <View style={styles.nutritionHeaderRow}>
-            <Text style={styles.sectionTitle}>{t('nutrition_breakdown_title')}</Text>
+            <View>
+              <Text style={styles.sectionTitle}>{t('nutrition_breakdown_title')}</Text>
+              {scan.rawServingInfo?.servingSizeText && (
+                <Text style={styles.sourceTag}>
+                  Serving Size: {scan.rawServingInfo.servingSizeText} (Normalized to per 100g)
+                </Text>
+              )}
+            </View>
             <Text style={styles.per100gText}>{t('per_100g')}</Text>
           </View>
 
           <View style={styles.table}>
-            <NutritionRow label="Energy / Calories" value={`${nutrition.energyKcal ?? '--'} kcal`} />
-            <NutritionRow label="Total Carbohydrates" value={`${nutrition.carbohydratesG ?? '--'} g`} />
-            <NutritionRow label="Total Sugars" value={`${nutrition.sugarsG ?? '--'} g`} highlight={Boolean((nutrition.sugarsG ?? 0) > 15)} />
-            <NutritionRow label="Added Sugars" value={`${nutrition.addedSugarsG ?? '--'} g`} highlight={Boolean((nutrition.addedSugarsG ?? 0) >= 10)} />
-            <NutritionRow label="Protein" value={`${nutrition.proteinG ?? '--'} g`} />
-            <NutritionRow label="Total Fat" value={`${nutrition.fatG ?? '--'} g`} />
-            <NutritionRow label="Saturated Fat" value={`${nutrition.saturatedFatG ?? '--'} g`} highlight={Boolean((nutrition.saturatedFatG ?? 0) >= 5)} />
-            <NutritionRow label="Trans Fat" value={`${nutrition.transFatG ?? '0'} g`} highlight={Boolean((nutrition.transFatG ?? 0) > 0.1)} />
-            <NutritionRow label="Dietary Fibre" value={`${nutrition.fibreG ?? '--'} g`} />
-            <NutritionRow label="Sodium" value={`${nutrition.sodiumMg ?? '--'} mg`} highlight={Boolean((nutrition.sodiumMg ?? 0) >= 500)} />
+            <NutritionRow label="Energy / Calories" value={nutrition.energyKcal != null ? `${nutrition.energyKcal} kcal` : 'UNKNOWN'} />
+            <NutritionRow label="Total Carbohydrates" value={nutrition.carbohydratesG != null ? `${nutrition.carbohydratesG} g` : 'UNKNOWN'} />
+            <NutritionRow label="Total Sugars" value={nutrition.sugarsG != null ? `${nutrition.sugarsG} g` : 'UNKNOWN'} highlight={Boolean((nutrition.sugarsG ?? 0) >= 15)} />
+            <NutritionRow label="Added Sugars" value={nutrition.addedSugarsG != null ? `${nutrition.addedSugarsG} g` : 'UNKNOWN'} highlight={Boolean((nutrition.addedSugarsG ?? 0) >= 10)} />
+            <NutritionRow label="Protein" value={nutrition.proteinG != null ? `${nutrition.proteinG} g` : 'UNKNOWN'} />
+            <NutritionRow label="Total Fat" value={nutrition.fatG != null ? `${nutrition.fatG} g` : 'UNKNOWN'} />
+            <NutritionRow label="Saturated Fat" value={nutrition.saturatedFatG != null ? `${nutrition.saturatedFatG} g` : 'UNKNOWN'} highlight={Boolean((nutrition.saturatedFatG ?? 0) >= 5)} />
+            <NutritionRow label="Trans Fat" value={nutrition.transFatG != null ? `${nutrition.transFatG} g` : 'UNKNOWN'} highlight={Boolean((nutrition.transFatG ?? 0) > 0.2)} />
+            <NutritionRow label="Dietary Fibre" value={nutrition.fibreG != null ? `${nutrition.fibreG} g` : 'UNKNOWN'} />
+            <NutritionRow label="Sodium" value={nutrition.sodiumMg != null ? `${nutrition.sodiumMg} mg` : 'UNKNOWN'} highlight={Boolean((nutrition.sodiumMg ?? 0) >= 600)} />
           </View>
         </Card>
 

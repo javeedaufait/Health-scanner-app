@@ -2,26 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.evaluateFoodForUser = evaluateFoodForUser;
 const constants_1 = require("./constants");
-// Common synonyms/derivatives for Indian food ingredient labels
-const ALLERGEN_KEYWORD_MAP = {
-    milk: ['milk', 'dairy', 'whey', 'casein', 'curd', 'ghee', 'butter', 'paneer', 'milk solids', 'milk powder', 'cream', 'lactose', 'cheese'],
-    lactose: ['lactose', 'milk', 'milk solids', 'whey', 'milk powder'],
-    peanut: ['peanut', 'peanuts', 'groundnut', 'groundnuts', 'peanut oil', 'arachis oil'],
-    tree_nuts: ['almond', 'cashew', 'walnut', 'pistachio', 'hazelnut', 'pecan', 'macadamia', 'kaju', 'badam', 'pista', 'akhrot'],
-    soy: ['soy', 'soya', 'soybean', 'soy lecithin', 'tofu', 'soy protein'],
-    wheat_gluten: ['wheat', 'gluten', 'maida', 'atta', 'semolina', 'suji', 'rava', 'wheat flour', 'refined wheat flour', 'spelt'],
-    egg: ['egg', 'eggs', 'egg powder', 'albumin', 'egg yolk', 'egg white', 'ovalbumin'],
-    fish: ['fish', 'salmon', 'tuna', 'anchovy', 'fish sauce', 'fish oil'],
-    shellfish: ['prawn', 'prawns', 'shrimp', 'crab', 'lobster', 'shellfish', 'mollusc'],
-    sesame: ['sesame', 'til', 'gingelly', 'sesame oil', 'sesame seeds', 'tahini'],
-};
+const allergen_detector_1 = require("./allergen-detector");
 function evaluateFoodForUser(input) {
-    const { userProfile, productNutrition, ingredientsList = [], detectedAllergens = [], customRules = constants_1.DEFAULT_HEURISTIC_RULES, } = input;
+    const { userProfile, productNutrition, ingredientsList = [], ingredientsText = '', detectedAllergens = [], customRules = constants_1.DEFAULT_HEURISTIC_RULES, } = input;
     const userConditions = userProfile.conditions || ['none'];
-    const userAllergens = userProfile.allergenRestrictions || [];
-    const userPreferences = userProfile.dietaryPreferences || ['none'];
-    const customRestrictions = userProfile.customRestrictions || [];
-    const allergenWarnings = [];
     const reasons = [];
     const missingFields = [];
     // Check missing nutrition fields (null or undefined)
@@ -44,79 +28,13 @@ function evaluateFoodForUser(input) {
     // =========================================================================
     // PATH 1: ALLERGEN & BIOLOGICAL SAFETY ENGINE (Independent Safety Warnings)
     // =========================================================================
-    for (const allergen of userAllergens) {
-        const allergenKeywords = ALLERGEN_KEYWORD_MAP[allergen] || [allergen.toLowerCase()];
-        let matchedIngredient = null;
-        if (detectedAllergens.includes(allergen)) {
-            matchedIngredient = allergen;
-        }
-        if (!matchedIngredient && ingredientsList.length > 0) {
-            for (const ingredient of ingredientsList) {
-                const lower = ingredient.toLowerCase();
-                for (const kw of allergenKeywords) {
-                    if (lower.includes(kw)) {
-                        matchedIngredient = ingredient.trim();
-                        break;
-                    }
-                }
-                if (matchedIngredient)
-                    break;
-            }
-        }
-        if (matchedIngredient) {
-            const allergenMeta = constants_1.MASTER_ALLERGENS.find((a) => a.code === allergen);
-            const nameEn = allergenMeta ? allergenMeta.nameEn : allergen;
-            const nameMl = allergenMeta ? allergenMeta.nameMl : allergen;
-            allergenWarnings.push({
-                allergen,
-                matchedIngredient,
-                isDefinite: true,
-                messageEn: `Safety Warning: Contains ${nameEn}, matching your allergen restriction.`,
-                messageMl: `മുന്നറിയിപ്പ്: നിങ്ങൾ ഒഴിവാക്കാൻ ആഗ്രഹിച്ച ${nameMl} ഇതിൽ അടങ്ങിയിരിക്കുന്നു.`,
-            });
-        }
-    }
-    // Custom ingredient restrictions
-    for (const customRest of customRestrictions) {
-        const trimmed = customRest.trim().toLowerCase();
-        if (!trimmed)
-            continue;
-        for (const ingredient of ingredientsList) {
-            if (ingredient.toLowerCase().includes(trimmed)) {
-                allergenWarnings.push({
-                    allergen: customRest,
-                    matchedIngredient: ingredient.trim(),
-                    isDefinite: true,
-                    messageEn: `Custom Restriction: Contains "${ingredient.trim()}", matching your entry "${customRest}".`,
-                    messageMl: `നിങ്ങളുടെ നിർദ്ദേശമായ "${customRest}" ഇതിൽ അടങ്ങിയിരിക്കുന്നു (${ingredient.trim()}).`,
-                });
-                break;
-            }
-        }
-    }
-    // Vegetarian / Vegan preferences
-    if (userPreferences.includes('vegan') || userPreferences.includes('vegetarian')) {
-        const nonVegKeywords = ['chicken', 'mutton', 'beef', 'pork', 'meat', 'gelatin', 'fish', 'prawn', 'crab', 'egg', 'lard'];
-        if (userPreferences.includes('vegan')) {
-            nonVegKeywords.push(...(ALLERGEN_KEYWORD_MAP.milk || []));
-        }
-        for (const ingredient of ingredientsList) {
-            const lower = ingredient.toLowerCase();
-            for (const kw of nonVegKeywords) {
-                if (lower.includes(kw)) {
-                    allergenWarnings.push({
-                        allergen: userPreferences.includes('vegan') ? 'vegan_mismatch' : 'vegetarian_mismatch',
-                        matchedIngredient: ingredient.trim(),
-                        isDefinite: true,
-                        messageEn: `Dietary Preference Alert: Contains non-plant/non-vegetarian ingredient (${ingredient.trim()}).`,
-                        messageMl: `സസ്യഭക്ഷണത്തിന് അനുയോജ്യമല്ലാത്ത ചേരുവ അടങ്ങിയിരിക്കുന്നു: ${ingredient.trim()}`,
-                    });
-                    break;
-                }
-            }
-        }
-    }
-    const hasAllergenHazard = allergenWarnings.length > 0;
+    const allergenResult = (0, allergen_detector_1.detectAllergensInIngredients)({
+        userProfile,
+        ingredientsList,
+        ingredientsText,
+        detectedAllergens,
+    });
+    const { hasAllergenHazard, allergenWarnings, precautionaryTraces } = allergenResult;
     // =========================================================================
     // PATH 2: NUTRIENT GUIDANCE ENGINE (Personalized Guidance Score 0–100)
     // =========================================================================
@@ -144,7 +62,10 @@ function evaluateFoodForUser(input) {
         }
         const conditionRules = activeRules.filter((r) => r.conditionCode === condition);
         for (const rule of conditionRules) {
-            const nutrientValue = productNutrition[rule.nutrient];
+            let nutrientValue = productNutrition[rule.nutrient];
+            if ((nutrientValue === null || nutrientValue === undefined) && rule.nutrient === 'addedSugarsG') {
+                nutrientValue = productNutrition.sugarsG ?? null;
+            }
             if (nutrientValue === null || nutrientValue === undefined) {
                 // Skip missing nutrient values (treated as UNKNOWN, no false score penalty)
                 continue;
@@ -248,6 +169,7 @@ function evaluateFoodForUser(input) {
         score: personalizedGuidanceScore, // Deprecated alias for backwards compatibility
         reasons,
         allergenWarnings,
+        precautionaryTraces,
         hasAllergenHazard,
         kidneyAdvisoryEn,
         kidneyAdvisoryMl,

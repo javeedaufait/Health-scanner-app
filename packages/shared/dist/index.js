@@ -19,3 +19,5 @@ __exportStar(require("./constants"), exports);
 __exportStar(require("./schemas"), exports);
 __exportStar(require("./evaluator"), exports);
 __exportStar(require("./comparator"), exports);
+__exportStar(require("./normalizer"), exports);
+__exportStar(require("./allergen-detector"), exports);

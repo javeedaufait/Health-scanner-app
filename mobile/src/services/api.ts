@@ -3,11 +3,14 @@ import * as SecureStore from 'expo-secure-store';
 import {
   UserProfile,
   Product,
+  NutritionValues,
   RuleEvaluationResult,
   ScanRecord,
   AllergenRestrictionCode,
   evaluateFoodForUser,
   ExtractedLabelNutritionSchema,
+  normalizeNutritionData,
+  parseServingSizeGrams,
 } from '@health-scanner/shared';
 import { DEMO_PRESETS } from './demo-products';
 
@@ -510,10 +513,18 @@ class LocalApiClient {
     // 2. Check local custom products cache
     const customStr = await AsyncStorage.getItem(STORAGE_KEYS.CUSTOM_PRODUCTS);
     if (customStr) {
-      const customMap = JSON.parse(customStr);
-      if (customMap[cleanBarcode]) {
-        return { found: true, product: customMap[cleanBarcode] };
-      }
+      try {
+        const customMap = JSON.parse(customStr);
+        const cached = customMap[cleanBarcode];
+        if (cached && cached.nutritionPer100g) {
+          const hasValidNutrition = Object.values(cached.nutritionPer100g).some(
+            (v) => v !== null && v !== undefined
+          );
+          if (hasValidNutrition) {
+            return { found: true, product: cached };
+          }
+        }
+      } catch {}
     }
 
     // 3. Query OpenFoodFacts directly over HTTPS (India and Global clusters)
@@ -600,6 +611,66 @@ class LocalApiClient {
       .map((s: string) => s.trim().toLowerCase())
       .filter(Boolean);
 
+    const getNutrimentVal = (keys: string[]): number | null => {
+      for (const k of keys) {
+        if (nutriments[k] !== undefined && nutriments[k] !== null && !isNaN(Number(nutriments[k]))) {
+          return Number(nutriments[k]);
+        }
+      }
+      return null;
+    };
+
+    const raw100g: NutritionValues = {
+      energyKcal: getNutrimentVal(['energy-kcal_100g', 'energy-kcal_prepared_100g', 'energy-kcal_value', 'energy-kcal']),
+      carbohydratesG: getNutrimentVal(['carbohydrates_100g', 'carbohydrates_prepared_100g', 'carbohydrates_value', 'carbohydrates']),
+      sugarsG: getNutrimentVal(['sugars_100g', 'sugars_prepared_100g', 'sugars_value', 'sugars']),
+      addedSugarsG: getNutrimentVal(['added-sugars_100g', 'added-sugars_prepared_100g', 'added-sugars_value', 'added-sugars']),
+      proteinG: getNutrimentVal(['proteins_100g', 'proteins_prepared_100g', 'proteins_value', 'proteins']),
+      fatG: getNutrimentVal(['fat_100g', 'fat_prepared_100g', 'fat_value', 'fat']),
+      saturatedFatG: getNutrimentVal(['saturated-fat_100g', 'saturated-fat_prepared_100g', 'saturated-fat_value', 'saturated-fat']),
+      transFatG: getNutrimentVal(['trans-fat_100g', 'trans-fat_prepared_100g', 'trans-fat_value', 'trans-fat']),
+      fibreG: getNutrimentVal(['fiber_100g', 'fiber_prepared_100g', 'fiber_value', 'fiber']),
+      sodiumMg: (() => {
+        const sodG = getNutrimentVal(['sodium_100g', 'sodium_prepared_100g', 'sodium_value', 'sodium']);
+        if (sodG !== null) return Math.round(sodG * 1000);
+        const saltG = getNutrimentVal(['salt_100g', 'salt_prepared_100g', 'salt_value', 'salt']);
+        if (saltG !== null) return Math.round((saltG / 2.5) * 1000);
+        return null;
+      })(),
+      saltG: getNutrimentVal(['salt_100g', 'salt_prepared_100g', 'salt_value', 'salt']),
+    };
+
+    const rawServing: NutritionValues = {
+      energyKcal: getNutrimentVal(['energy-kcal_serving', 'energy-kcal_prepared_serving']),
+      carbohydratesG: getNutrimentVal(['carbohydrates_serving', 'carbohydrates_prepared_serving']),
+      sugarsG: getNutrimentVal(['sugars_serving', 'sugars_prepared_serving']),
+      addedSugarsG: getNutrimentVal(['added-sugars_serving', 'added-sugars_prepared_serving']),
+      proteinG: getNutrimentVal(['proteins_serving', 'proteins_prepared_serving']),
+      fatG: getNutrimentVal(['fat_serving', 'fat_prepared_serving']),
+      saturatedFatG: getNutrimentVal(['saturated-fat_serving', 'saturated-fat_prepared_serving']),
+      transFatG: getNutrimentVal(['trans-fat_serving', 'trans-fat_prepared_serving']),
+      fibreG: getNutrimentVal(['fiber_serving', 'fiber_prepared_serving']),
+      sodiumMg: (() => {
+        const sodG = getNutrimentVal(['sodium_serving', 'sodium_prepared_serving']);
+        if (sodG !== null) return Math.round(sodG * 1000);
+        const saltG = getNutrimentVal(['salt_serving', 'salt_prepared_serving']);
+        if (saltG !== null) return Math.round((saltG / 2.5) * 1000);
+        return null;
+      })(),
+      saltG: getNutrimentVal(['salt_serving', 'salt_prepared_serving']),
+    };
+
+    const servingInfo = {
+      servingSizeText: p.serving_size || null,
+      servingSizeGrams: parseServingSizeGrams(p.serving_size),
+    };
+
+    const normResult = normalizeNutritionData({
+      nutritionPer100g: raw100g,
+      nutritionPerServing: rawServing,
+      servingInfo,
+    });
+
     return {
       id: `off-${p.code || barcode}`,
       barcode: p.code || barcode,
@@ -608,19 +679,9 @@ class LocalApiClient {
       category: p.categories?.split(',')[0]?.trim() || 'Packaged Food',
       servingSize: p.serving_size || undefined,
       imageUrl: p.image_url || p.image_front_url || undefined,
-      nutritionPer100g: {
-        energyKcal: nutriments['energy-kcal_100g'] ?? nutriments['energy-kcal'] ?? null,
-        carbohydratesG: nutriments['carbohydrates_100g'] ?? null,
-        sugarsG: nutriments['sugars_100g'] ?? null,
-        addedSugarsG: nutriments['added-sugars_100g'] ?? null,
-        proteinG: nutriments['proteins_100g'] ?? null,
-        fatG: nutriments['fat_100g'] ?? null,
-        saturatedFatG: nutriments['saturated-fat_100g'] ?? null,
-        transFatG: nutriments['trans-fat_100g'] ?? null,
-        fibreG: nutriments['fiber_100g'] ?? null,
-        sodiumMg: nutriments['sodium_100g'] ? Math.round(nutriments['sodium_100g'] * 1000) : (nutriments.salt_100g ? Math.round((nutriments.salt_100g / 2.5) * 1000) : null),
-        saltG: nutriments['salt_100g'] ?? null,
-      },
+      nutritionPer100g: normResult.normalizedPer100g,
+      nutritionPerServing: rawServing,
+      rawServingInfo: normResult.servingInfo,
       ingredientsText: p.ingredients_text_en || p.ingredients_text || undefined,
       ingredientsList,
       detectedAllergens: Array.from(new Set(detectedAllergens)),
@@ -739,12 +800,43 @@ class LocalApiClient {
     return history.slice(0, limit);
   }
 
-  async getScanById(id: string) {
+  async getScanById(id: string): Promise<ScanRecord> {
     const historyStr = await AsyncStorage.getItem(STORAGE_KEYS.SCAN_HISTORY);
     if (historyStr) {
       const history: ScanRecord[] = JSON.parse(historyStr);
       const found = history.find((s) => s.id === id);
-      if (found) return found;
+      if (found) {
+        // If scan record has no nutrition values, auto-refresh from OpenFoodFacts & re-evaluate
+        const hasNutrition = Object.values(found.nutritionSnapshot || {}).some(
+          (v) => v !== null && v !== undefined
+        );
+        if (!hasNutrition && found.productId) {
+          const barcode = found.productId.replace('off-', '');
+          const lookup = await this.lookupBarcode(barcode);
+          if (lookup.found && lookup.product) {
+            const userProfile = await this.getProfile();
+            const evalResult = evaluateFoodForUser({
+              userProfile,
+              productNutrition: lookup.product.nutritionPer100g,
+              ingredientsList: lookup.product.ingredientsList,
+              detectedAllergens: lookup.product.detectedAllergens,
+            });
+            found.nutritionSnapshot = lookup.product.nutritionPer100g;
+            found.nutritionPerServingSnapshot = lookup.product.nutritionPerServing;
+            found.rawServingInfo = lookup.product.rawServingInfo;
+            found.assessmentStatus = evalResult.status;
+            found.score = evalResult.score;
+            found.personalizedGuidanceScore = evalResult.personalizedGuidanceScore;
+            found.reasons = evalResult.reasons;
+            found.allergenWarnings = evalResult.allergenWarnings;
+            found.precautionaryTraces = evalResult.precautionaryTraces;
+
+            // Persist updated scan record
+            await AsyncStorage.setItem(STORAGE_KEYS.SCAN_HISTORY, JSON.stringify(history));
+          }
+        }
+        return found;
+      }
     }
     throw new Error('Scan record not found.');
   }

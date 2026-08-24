@@ -59,6 +59,24 @@ export interface NutritionValues {
     sodiumMg?: number | null;
     saltG?: number | null;
 }
+export interface RawServingInfo {
+    servingSizeGrams?: number | null;
+    servingSizeMl?: number | null;
+    servingSizeText?: string | null;
+    basis?: 'per_100g' | 'per_100ml' | 'per_serving' | 'mixed' | 'unknown';
+}
+export interface RawNutrientEntry {
+    value: number | null;
+    unit: string;
+    basis: 'per_100g' | 'per_serving' | 'unknown';
+}
+export interface NutritionNormalizationResult {
+    normalizedPer100g: NutritionValues;
+    originalSnapshot?: Record<string, RawNutrientEntry>;
+    servingInfo: RawServingInfo;
+    conversionApplied: boolean;
+    missingOrAmbiguousFields: string[];
+}
 export interface Product {
     id: string;
     barcode?: string;
@@ -70,6 +88,7 @@ export interface Product {
     imageUrl?: string;
     nutritionPer100g: NutritionValues;
     nutritionPerServing?: NutritionValues;
+    rawServingInfo?: RawServingInfo;
     ingredientsText?: string;
     ingredientsList: string[];
     detectedAllergens: AllergenRestrictionCode[];
@@ -94,6 +113,7 @@ export interface AllergenWarning {
     allergen: AllergenRestrictionCode | string;
     matchedIngredient: string;
     isDefinite: boolean;
+    warningType: 'CONTAINS' | 'MAY_CONTAIN_TRACES';
     messageEn: string;
     messageMl: string;
 }
@@ -105,6 +125,7 @@ export interface RuleEvaluationResult {
     score: number;
     reasons: EvaluationReason[];
     allergenWarnings: AllergenWarning[];
+    precautionaryTraces: AllergenWarning[];
     hasAllergenHazard: boolean;
     kidneyAdvisoryEn?: string;
     kidneyAdvisoryMl?: string;
@@ -143,7 +164,10 @@ export interface ScanRecord {
     personalizedGuidanceScore?: number;
     reasons: EvaluationReason[];
     allergenWarnings: AllergenWarning[];
+    precautionaryTraces?: AllergenWarning[];
     nutritionSnapshot: NutritionValues;
+    nutritionPerServingSnapshot?: NutritionValues;
+    rawServingInfo?: RawServingInfo;
     aiExplanationEn?: string;
     aiExplanationMl?: string;
     createdAt: string;

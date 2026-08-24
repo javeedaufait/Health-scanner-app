@@ -3,6 +3,7 @@ export interface EvaluateFoodInput {
     userProfile: Partial<UserProfile>;
     productNutrition: NutritionValues;
     ingredientsList?: string[];
+    ingredientsText?: string;
     detectedAllergens?: AllergenRestrictionCode[];
     customRules?: HealthRule[];
 }
