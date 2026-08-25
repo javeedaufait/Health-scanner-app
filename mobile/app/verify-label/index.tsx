@@ -15,7 +15,7 @@ import { Button } from '@/components/common/Button';
 import { Header } from '@/components/common/Header';
 import { colors, spacing, typography, borderRadius } from '@/theme';
 import { t } from '@/i18n';
-import { api } from '@/services/api';
+import { api, getPendingImages } from '@/services/api';
 import { OpenFoodFactsSubmitter } from '@/services/off-submitter';
 import { NutritionValues } from '@health-scanner/shared';
 import { NonFoodDetectedModal } from '@/components/scanner/NonFoodDetectedModal';
@@ -117,10 +117,7 @@ export default function VerifyLabelScreen() {
 
       // 2. Trigger asynchronous background contribution to OpenFoodFacts if checked
       if (contributeToOFF && barcode) {
-        let rawImages: string[] = [];
-        try {
-          if (params.rawImagesJson) rawImages = JSON.parse(params.rawImagesJson);
-        } catch {}
+        const rawImages = getPendingImages();
 
         OpenFoodFactsSubmitter.submitProductToOpenFoodFacts({
           barcode,

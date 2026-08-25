@@ -18,7 +18,7 @@ import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { colors, spacing, typography, borderRadius } from '@/theme';
 import { t } from '@/i18n';
-import { api } from '@/services/api';
+import { api, setPendingImages } from '@/services/api';
 import { DEMO_PRESETS, DemoProductPreset } from '@/services/demo-products';
 import { MultiPhotoCaptureModal } from '@/components/scanner/MultiPhotoCaptureModal';
 import { NonFoodDetectedModal } from '@/components/scanner/NonFoodDetectedModal';
@@ -79,6 +79,8 @@ export default function ScanScreen() {
         return;
       }
 
+      setPendingImages(images);
+
       router.push({
         pathname: '/verify-label',
         params: {
@@ -98,7 +100,6 @@ export default function ScanScreen() {
           fibreG: n.fibreG != null ? String(n.fibreG) : '',
           sodiumMg: n.sodiumMg != null ? String(n.sodiumMg) : '',
           ingredientsText: (data.ingredients || []).join(', '),
-          rawImagesJson: JSON.stringify(images),
         },
       });
     } catch (err: any) {

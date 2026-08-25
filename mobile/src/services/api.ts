@@ -29,6 +29,18 @@ const STORAGE_KEYS = {
   USERS_REGISTRY: 'health_users_registry',
 };
 
+let pendingCapturedImages: string[] = [];
+
+export function setPendingImages(images: string[]) {
+  pendingCapturedImages = images;
+}
+
+export function getPendingImages(): string[] {
+  const imgs = [...pendingCapturedImages];
+  pendingCapturedImages = [];
+  return imgs;
+}
+
 // Helper for Android Keystore / iOS Keychain hardware encryption
 async function saveSecure(key: string, value: string): Promise<void> {
   try {
@@ -746,6 +758,27 @@ class LocalApiClient {
       ingredientsList = data.customProduct.ingredientsList || [];
       detectedAllergens = data.customProduct.detectedAllergens || [];
       scanType = 'ocr_label';
+
+      const barcodeKey = data.barcode || data.customProduct.barcode;
+      const customProd: Product = {
+        id: `custom-${barcodeKey || Date.now()}`,
+        barcode: barcodeKey || undefined,
+        name: productName,
+        brand,
+        category: data.customProduct.category || 'Packaged Food',
+        servingSize: data.customProduct.servingSize,
+        nutritionPer100g: nutrition,
+        ingredientsText: data.customProduct.ingredientsText,
+        ingredientsList,
+        detectedAllergens,
+        source: 'ocr_extracted',
+        sourceConfidence: 0.9,
+      };
+
+      if (barcodeKey) {
+        await this.cacheCustomProduct(barcodeKey, customProd);
+      }
+      product = customProd;
     }
 
     // Pure deterministic calculation in 0ms on-device
