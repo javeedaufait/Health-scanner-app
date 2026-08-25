@@ -10,7 +10,7 @@ import {
   TextInput,
   Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { Header } from '@/components/common/Header';
@@ -30,6 +30,15 @@ export default function ScanScreen() {
 
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<any>(null);
+
+  // Reset scanner state whenever the screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      setHasScanned(false);
+      setIsProcessing(false);
+      setManualBarcode('');
+    }, [])
+  );
 
   // Reset scan debounce when changing modes
   useEffect(() => {
@@ -56,6 +65,9 @@ export default function ScanScreen() {
           scanType: 'barcode',
         });
         router.push(`/result/${evalResult.scanId}`);
+        setTimeout(() => {
+          setHasScanned(false);
+        }, 500);
       } else {
         // Barcode not found -> Suggest OCR Label Scan
         Alert.alert(
