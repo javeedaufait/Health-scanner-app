@@ -85,6 +85,7 @@ export const NutritionValuesSchema = z.object({
 });
 
 export const ExtractedLabelNutritionSchema = z.object({
+  is_edible_food: z.boolean().optional().default(true),
   product_name: z.string().nullable().optional(),
   brand: z.string().nullable().optional(),
   serving_size: z.string().nullable().optional(),

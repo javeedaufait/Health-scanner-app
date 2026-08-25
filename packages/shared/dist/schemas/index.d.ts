@@ -154,6 +154,7 @@ export declare const NutritionValuesSchema: z.ZodObject<{
     saltG?: number | null | undefined;
 }>;
 export declare const ExtractedLabelNutritionSchema: z.ZodObject<{
+    is_edible_food: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>;
     product_name: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     brand: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     serving_size: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -198,6 +199,7 @@ export declare const ExtractedLabelNutritionSchema: z.ZodObject<{
     allergens: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
     confidence: z.ZodDefault<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
+    is_edible_food: boolean;
     nutrition: {
         energy_kcal?: number | null | undefined;
         carbohydrates_g?: number | null | undefined;
@@ -231,6 +233,7 @@ export declare const ExtractedLabelNutritionSchema: z.ZodObject<{
         sodium_mg?: number | null | undefined;
         salt_g?: number | null | undefined;
     };
+    is_edible_food?: boolean | undefined;
     product_name?: string | null | undefined;
     brand?: string | null | undefined;
     serving_size?: string | null | undefined;

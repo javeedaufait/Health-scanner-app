@@ -20,6 +20,8 @@ import { colors, spacing, typography, borderRadius } from '@/theme';
 import { t } from '@/i18n';
 import { api } from '@/services/api';
 import { DEMO_PRESETS, DemoProductPreset } from '@/services/demo-products';
+import { MultiPhotoCaptureModal } from '@/components/scanner/MultiPhotoCaptureModal';
+import { NonFoodDetectedModal } from '@/components/scanner/NonFoodDetectedModal';
 
 export default function ScanScreen() {
   const router = useRouter();
@@ -51,6 +53,62 @@ export default function ScanScreen() {
     processBarcodeScan(result.data);
   };
 
+  const [showMultiPhotoModal, setShowMultiPhotoModal] = useState(false);
+  const [uncataloguedBarcode, setUncataloguedBarcode] = useState('');
+  const [showNonFoodModal, setShowNonFoodModal] = useState(false);
+  const [nonFoodData, setNonFoodData] = useState<{ name: string; brand?: string; category?: string }>({
+    name: 'Non-Food Product',
+  });
+
+  const handleAnalyzeMultiPhotos = async (images: string[]) => {
+    setShowMultiPhotoModal(false);
+    setIsProcessing(true);
+    try {
+      const ocrRes = await api.extractMultiPhotoNutrition(images);
+      const data = ocrRes.data;
+      const n = data.nutrition;
+
+      // Intercept Non-Food Products (e.g. Toothpaste, Cosmetics, Detergent, Soaps)
+      if (data.isEdibleFood === false) {
+        setNonFoodData({
+          name: data.productName || 'Personal Care Item',
+          brand: data.brand || 'Supermarket Brand',
+          category: 'Personal Care / Household',
+        });
+        setShowNonFoodModal(true);
+        return;
+      }
+
+      router.push({
+        pathname: '/verify-label',
+        params: {
+          barcode: uncataloguedBarcode,
+          isEdibleFood: 'true',
+          productName: data.productName || 'Captured Food Product',
+          brand: data.brand || 'Supermarket Product',
+          servingSize: data.servingSize || '',
+          energyKcal: n.energyKcal != null ? String(n.energyKcal) : '',
+          carbohydratesG: n.carbohydratesG != null ? String(n.carbohydratesG) : '',
+          sugarsG: n.sugarsG != null ? String(n.sugarsG) : '',
+          addedSugarsG: n.addedSugarsG != null ? String(n.addedSugarsG) : '',
+          proteinG: n.proteinG != null ? String(n.proteinG) : '',
+          fatG: n.fatG != null ? String(n.fatG) : '',
+          saturatedFatG: n.saturatedFatG != null ? String(n.saturatedFatG) : '',
+          transFatG: n.transFatG != null ? String(n.transFatG) : '',
+          fibreG: n.fibreG != null ? String(n.fibreG) : '',
+          sodiumMg: n.sodiumMg != null ? String(n.sodiumMg) : '',
+          ingredientsText: (data.ingredients || []).join(', '),
+          rawImagesJson: JSON.stringify(images),
+        },
+      });
+    } catch (err: any) {
+      Alert.alert('AI Vision Extraction Failed', err.message || 'Could not extract label nutrition');
+    } finally {
+      setIsProcessing(false);
+      setHasScanned(false);
+    }
+  };
+
   const processBarcodeScan = async (barcode: string) => {
     if (!barcode.trim()) return;
     setIsProcessing(true);
@@ -69,22 +127,20 @@ export default function ScanScreen() {
           setHasScanned(false);
         }, 500);
       } else {
-        // Barcode not found -> Suggest OCR Label Scan
+        // Barcode not found -> Suggest Multi-Photo Label Capture & Contribution
+        setUncataloguedBarcode(barcode.trim());
         Alert.alert(
           'Product Not in Catalog',
-          `Barcode ${barcode} is not in our database yet. Would you like to photograph the nutrition label for AI analysis?`,
+          `Barcode ${barcode} is not in our database yet. Take photo(s) of the label to analyze it and contribute to OpenFoodFacts!`,
           [
             {
-              text: 'Try Another Barcode',
+              text: 'Cancel',
               style: 'cancel',
               onPress: () => setHasScanned(false),
             },
             {
-              text: 'Scan Nutrition Label',
-              onPress: () => {
-                setScanMode('ocr');
-                setHasScanned(false);
-              },
+              text: '📷 Take Label Photo(s)',
+              onPress: () => setShowMultiPhotoModal(true),
             },
           ]
         );
@@ -358,6 +414,27 @@ export default function ScanScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <MultiPhotoCaptureModal
+        visible={showMultiPhotoModal}
+        barcode={uncataloguedBarcode}
+        onClose={() => {
+          setShowMultiPhotoModal(false);
+          setHasScanned(false);
+        }}
+        onAnalyzePhotos={handleAnalyzeMultiPhotos}
+      />
+
+      <NonFoodDetectedModal
+        visible={showNonFoodModal}
+        productName={nonFoodData.name}
+        brand={nonFoodData.brand}
+        category={nonFoodData.category}
+        onClose={() => {
+          setShowNonFoodModal(false);
+          setHasScanned(false);
+        }}
+      />
     </View>
   );
 }

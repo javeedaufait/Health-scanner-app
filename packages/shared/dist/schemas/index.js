@@ -78,6 +78,7 @@ exports.NutritionValuesSchema = zod_1.z.object({
     saltG: zod_1.z.number().nullable().optional(),
 });
 exports.ExtractedLabelNutritionSchema = zod_1.z.object({
+    is_edible_food: zod_1.z.boolean().optional().default(true),
     product_name: zod_1.z.string().nullable().optional(),
     brand: zod_1.z.string().nullable().optional(),
     serving_size: zod_1.z.string().nullable().optional(),
