@@ -423,6 +423,15 @@ export default function ScanScreen() {
           setHasScanned(false);
         }}
         onAnalyzePhotos={handleAnalyzeMultiPhotos}
+        onNonFoodSelected={() => {
+          setShowMultiPhotoModal(false);
+          setNonFoodData({
+            name: 'Non-Food Product',
+            brand: 'Personal Care / Household',
+            category: 'Personal Care / Household',
+          });
+          setShowNonFoodModal(true);
+        }}
       />
 
       <NonFoodDetectedModal

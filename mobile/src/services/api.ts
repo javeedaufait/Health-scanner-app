@@ -11,6 +11,9 @@ import {
   ExtractedLabelNutritionSchema,
   normalizeNutritionData,
   parseServingSizeGrams,
+  findBetterAlternatives,
+  BetterAlternativesResult,
+  BetterAlternativeItem,
 } from '@health-scanner/shared';
 import { DEMO_PRESETS } from './demo-products';
 
@@ -876,6 +879,41 @@ class LocalApiClient {
   async getSavedProducts() {
     const savedStr = await AsyncStorage.getItem(STORAGE_KEYS.SAVED_PRODUCTS);
     return savedStr ? JSON.parse(savedStr) : [];
+  }
+
+  async getBetterAlternatives(params: {
+    productId?: string;
+    barcode?: string;
+    category?: string;
+    nutrition: NutritionValues;
+    currentEvaluation?: RuleEvaluationResult;
+  }): Promise<BetterAlternativesResult> {
+    const userProfile = await this.getProfile();
+    const candidates: Product[] = Object.values(SEED_PRODUCT_CATALOG);
+
+    const customStr = await AsyncStorage.getItem(STORAGE_KEYS.CUSTOM_PRODUCTS);
+    if (customStr) {
+      try {
+        const customMap = JSON.parse(customStr);
+        for (const p of Object.values(customMap)) {
+          if (p && (p as any).id) {
+            candidates.push(p as Product);
+          }
+        }
+      } catch {}
+    }
+
+    return findBetterAlternatives({
+      currentProduct: {
+        id: params.productId,
+        barcode: params.barcode,
+        category: params.category,
+        nutrition: params.nutrition,
+      },
+      candidateProducts: candidates,
+      userProfile,
+      currentEvaluation: params.currentEvaluation,
+    });
   }
 
   // --- Direct Multimodal Gemini Flash OCR ---

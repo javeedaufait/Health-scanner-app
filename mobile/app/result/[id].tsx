@@ -22,7 +22,7 @@ import {
 } from '@/components/common/DisclaimerBanner';
 import { colors, spacing, typography, borderRadius } from '@/theme';
 import { t } from '@/i18n';
-import { ScanRecord, NutritionValues } from '@health-scanner/shared';
+import { ScanRecord, NutritionValues, BetterAlternativesResult } from '@health-scanner/shared';
 
 export default function ResultScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -33,6 +33,8 @@ export default function ResultScreen() {
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
   const [showDetailedNutrition, setShowDetailedNutrition] = useState(false);
+  const [alternativesRes, setAlternativesRes] = useState<BetterAlternativesResult | null>(null);
+  const [loadingAlternatives, setLoadingAlternatives] = useState(false);
 
   useEffect(() => {
     async function fetchScan() {
@@ -48,6 +50,39 @@ export default function ResultScreen() {
     }
     fetchScan();
   }, [id]);
+
+  useEffect(() => {
+    async function fetchAlternatives() {
+      if (!scan) return;
+      try {
+        setLoadingAlternatives(true);
+        const res = await api.getBetterAlternatives({
+          productId: scan.productId,
+          nutrition: scan.nutritionSnapshot || {},
+          currentEvaluation: {
+            ruleSetVersion: '1.0.0',
+            status: scan.assessmentStatus,
+            score: scan.score,
+            personalizedGuidanceScore: scan.personalizedGuidanceScore || scan.score || 50,
+            reasons: scan.reasons || [],
+            allergenWarnings: scan.allergenWarnings || [],
+            precautionaryTraces: scan.precautionaryTraces || [],
+            hasAllergenHazard: (scan.allergenWarnings || []).length > 0,
+            overallSummaryEn: '',
+            overallSummaryMl: '',
+            isMissingNutritionData: false,
+            missingFields: [],
+          },
+        });
+        setAlternativesRes(res);
+      } catch (e) {
+        console.warn('Error fetching alternatives', e);
+      } finally {
+        setLoadingAlternatives(false);
+      }
+    }
+    fetchAlternatives();
+  }, [scan]);
 
   const handleToggleSave = async () => {
     if (!scan?.productId) return;
@@ -176,6 +211,77 @@ export default function ResultScreen() {
             <NutritionRow label="Dietary Fibre" value={nutrition.fibreG != null ? `${nutrition.fibreG} g` : 'UNKNOWN'} />
             <NutritionRow label="Sodium" value={nutrition.sodiumMg != null ? `${nutrition.sodiumMg} mg` : 'UNKNOWN'} highlight={Boolean((nutrition.sodiumMg ?? 0) >= 600)} />
           </View>
+        </Card>
+
+        {/* Better Alternatives Section */}
+        <Card variant="default" style={styles.alternativesCard}>
+          <View style={styles.alternativesHeader}>
+            <Text style={styles.alternativesTitle}>
+              💡 {language === 'ml' ? 'നിങ്ങളുടെ പ്രൊഫൈലിന് അനുയോജ്യമായ മറ്റ് ഉൽപ്പന്നങ്ങൾ' : 'Better Alternatives for Your Profile'}
+            </Text>
+            <Text style={styles.alternativesSubtitle}>
+              {language === 'ml'
+                ? 'നിങ്ങളുടെ ആരോഗ്യ മുൻഗണനകൾക്കനുസൃതമായി ശുപാർശ ചെയ്തവ'
+                : 'Ranked specifically based on your dietary and health profile'}
+            </Text>
+          </View>
+
+          {loadingAlternatives ? (
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: spacing.md }} />
+          ) : alternativesRes && alternativesRes.hasAlternatives ? (
+            alternativesRes.alternatives.map((item, idx) => (
+              <TouchableOpacity
+                key={item.product.id || idx}
+                style={styles.altItemCard}
+                activeOpacity={0.85}
+                onPress={() => {
+                  if (scan.productId && item.product.id) {
+                    router.push(`/compare?ids=${scan.productId},${item.product.id}` as any);
+                  }
+                }}
+              >
+                <View style={styles.altItemHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.altProductName}>{item.product.name}</Text>
+                    <Text style={styles.altBrandName}>{item.product.brand || item.product.category}</Text>
+                  </View>
+                  <View style={styles.altBadge}>
+                    <Text style={styles.altBadgeText}>
+                      {language === 'ml' ? item.guidanceBadgeMl : item.guidanceBadgeEn}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.altScoreRow}>
+                  <Text style={styles.altScoreText}>
+                    {language === 'ml' ? 'സ്കോർ' : 'Profile Score'}:{' '}
+                    <Text style={styles.altScoreVal}>{item.evaluation.personalizedGuidanceScore}/100</Text>
+                  </Text>
+                  <Text style={styles.tapToCompareHint}>
+                    {language === 'ml' ? 'താരതമ്യം ചെയ്യാൻ ടാപ്പ് ചെയ്യുക ➔' : 'Tap to compare ➔'}
+                  </Text>
+                </View>
+
+                {/* Concrete Comparison Reasons */}
+                <View style={styles.reasonsList}>
+                  {(language === 'ml' ? item.comparisonReasonsMl : item.comparisonReasonsEn).map((reason, rIdx) => (
+                    <View key={rIdx} style={styles.reasonRow}>
+                      <Text style={styles.altReasonBullet}>✓</Text>
+                      <Text style={styles.altReasonText}>{reason}</Text>
+                    </View>
+                  ))}
+                </View>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={styles.emptyAltContainer}>
+              <Text style={styles.emptyAltText}>
+                {language === 'ml'
+                  ? (alternativesRes?.emptyMessageMl || 'അനുയോജ്യമായ മറ്റ് ഉൽപ്പന്നങ്ങൾ ഇപ്പോൾ ലഭ്യമല്ല.')
+                  : (alternativesRes?.emptyMessageEn || 'No suitable alternatives found yet.')}
+              </Text>
+            </View>
+          )}
         </Card>
 
         {/* Action Buttons */}
@@ -369,5 +475,118 @@ const styles = StyleSheet.create({
   },
   primaryActionBtn: {
     marginBottom: spacing.xs,
+  },
+  alternativesCard: {
+    marginBottom: spacing.md,
+    backgroundColor: '#f0fdf4',
+    borderColor: '#bbf7d0',
+  },
+  alternativesHeader: {
+    marginBottom: spacing.md,
+  },
+  alternativesTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#166534',
+  },
+  alternativesSubtitle: {
+    fontSize: 12,
+    color: '#15803d',
+    marginTop: 2,
+  },
+  altItemCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: '#dcfce7',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  altItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 6,
+  },
+  altProductName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  altBrandName: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 1,
+  },
+  altBadge: {
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: '#86efac',
+    marginLeft: spacing.xs,
+  },
+  altBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#15803d',
+  },
+  altScoreRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  altScoreText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  altScoreVal: {
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  tapToCompareHint: {
+    fontSize: 11,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  reasonsList: {
+    marginTop: 4,
+    gap: 3,
+  },
+  reasonRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  altReasonBullet: {
+    color: '#16a34a',
+    fontWeight: '800',
+    fontSize: 12,
+    marginRight: 6,
+    marginTop: 1,
+  },
+  altReasonText: {
+    fontSize: 12,
+    color: '#334155',
+    flex: 1,
+    lineHeight: 16,
+  },
+  emptyAltContainer: {
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  emptyAltText: {
+    fontSize: 13,
+    color: '#64748b',
+    fontStyle: 'italic',
   },
 });

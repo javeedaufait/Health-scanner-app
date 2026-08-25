@@ -78,5 +78,9 @@
   "edit_profile": "Edit Health Profile",
 
   "disclaimer_text": "This app provides general nutritional information and a Personalized Guidance Score based on public guidelines (FSSAI, ICMR-NIN, WHO) and your inputs. It is an app-generated heuristic, not medical advice, a clinical diagnosis, or a guarantee of safety. Always consult a qualified healthcare professional for medical decisions.",
-  "allergy_disclaimer": "Always verify the physical package label before consuming, especially for severe allergies."
+  "allergy_disclaimer": "Always verify the physical package label before consuming, especially for severe allergies.",
+  "better_alternatives_title": "Better Alternatives for Your Profile",
+  "better_alternatives_subtitle": "Ranked specifically based on your dietary and health profile",
+  "better_fit_badge": "Better fit for your profile",
+  "no_alternatives_found": "No suitable alternatives found yet."
 }

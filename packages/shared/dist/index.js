@@ -21,3 +21,4 @@ __exportStar(require("./evaluator"), exports);
 __exportStar(require("./comparator"), exports);
 __exportStar(require("./normalizer"), exports);
 __exportStar(require("./allergen-detector"), exports);
+__exportStar(require("./alternatives"), exports);

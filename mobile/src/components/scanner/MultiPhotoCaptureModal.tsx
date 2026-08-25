@@ -20,6 +20,7 @@ interface MultiPhotoCaptureModalProps {
   barcode: string;
   onClose: () => void;
   onAnalyzePhotos: (base64Images: string[]) => void;
+  onNonFoodSelected?: () => void;
 }
 
 export const MultiPhotoCaptureModal: React.FC<MultiPhotoCaptureModalProps> = ({
@@ -27,6 +28,7 @@ export const MultiPhotoCaptureModal: React.FC<MultiPhotoCaptureModalProps> = ({
   barcode,
   onClose,
   onAnalyzePhotos,
+  onNonFoodSelected,
 }) => {
   const [photo1, setPhoto1] = useState<string | null>(null); // Front / Barcode
   const [photo2, setPhoto2] = useState<string | null>(null); // Nutrition Table
@@ -172,6 +174,11 @@ export const MultiPhotoCaptureModal: React.FC<MultiPhotoCaptureModalProps> = ({
             disabled={!photo1 && !photo2 && !photo3}
             style={styles.proceedBtn}
           />
+          {onNonFoodSelected ? (
+            <TouchableOpacity onPress={onNonFoodSelected} style={styles.notFoodBtn} activeOpacity={0.8}>
+              <Text style={styles.notFoodBtnText}>🛑 Not a Food Product? (Toothpaste / Cosmetics / Soap)</Text>
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity onPress={onClose} style={styles.cancelBtn}>
             <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
@@ -305,5 +312,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     fontWeight: '600',
+  },
+  notFoodBtn: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    backgroundColor: '#fff1f2',
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: '#fecdd3',
+    marginBottom: spacing.sm,
+  },
+  notFoodBtnText: {
+    color: '#be123c',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

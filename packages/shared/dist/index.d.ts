@@ -5,4 +5,5 @@ export * from './evaluator';
 export * from './comparator';
 export * from './normalizer';
 export * from './allergen-detector';
+export * from './alternatives';
 //# sourceMappingURL=index.d.ts.map
