@@ -243,6 +243,52 @@ export default function ScanScreen() {
     }
   };
 
+  const pickBarcodeFromGallery = async () => {
+    try {
+      setIsProcessing(true);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]?.base64) {
+        const base64Image = result.assets[0].base64;
+
+        const ocrRes = await api.extractLabelNutrition(base64Image);
+
+        if (ocrRes.data.isEdibleFood === false) {
+          setNonFoodData({
+            name: ocrRes.data.productName || 'Personal Care Item',
+            brand: ocrRes.data.brand || 'Supermarket Brand',
+            category: 'Personal Care / Household',
+          });
+          setShowNonFoodModal(true);
+          return;
+        }
+
+        const customData = {
+          name: ocrRes.data.productName || 'Gallery Barcode Product',
+          brand: ocrRes.data.brand || 'Supermarket Product',
+          nutrition: ocrRes.data.nutrition,
+          ingredientsList: ocrRes.data.ingredients,
+          detectedAllergens: ocrRes.data.allergens,
+        };
+
+        const evalResult = await api.evaluateProduct({
+          customProduct: customData,
+          scanType: 'ocr_label',
+        });
+        router.push(`/result/${evalResult.scanId}`);
+      }
+    } catch (err: any) {
+      Alert.alert('Barcode Gallery Import Failed', err.message || 'Could not scan barcode from gallery image');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Header
@@ -351,6 +397,20 @@ export default function ScanScreen() {
             </View>
           )}
         </Card>
+
+        {/* Action Controls for Barcode Mode */}
+        {scanMode === 'barcode' && (
+          <View style={styles.ocrActionsRow}>
+            <Button
+              title="🖼️ Scan Barcode Photo from Gallery"
+              variant="outline"
+              size="lg"
+              onPress={pickBarcodeFromGallery}
+              disabled={isProcessing}
+              style={{ flex: 1, marginBottom: spacing.md }}
+            />
+          </View>
+        )}
 
         {/* Action Controls for OCR Mode */}
         {scanMode === 'ocr' && (
