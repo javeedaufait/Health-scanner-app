@@ -25,7 +25,7 @@ export interface OpenFoodFactsSubmissionPayload {
 }
 
 export class OpenFoodFactsSubmitter {
-  private static readonly WRITE_API_URL = 'https://in.openfoodfacts.org/cgi/product_jso.pl';
+  private static readonly WRITE_API_URL = 'https://world.openfoodfacts.org/cgi/product_jqm2.pl';
   private static readonly IMAGE_API_URL = 'https://world.openfoodfacts.org/cgi/product_image_upload.pl';
 
   /**
@@ -45,8 +45,14 @@ export class OpenFoodFactsSubmitter {
       // 1. Build metadata form data payload for OpenFoodFacts CGI API
       const formData = new URLSearchParams();
       formData.append('code', barcode);
-      formData.append('user_id', 'health_scanner_app');
-      formData.append('password', 'open_contributor'); // Anonymous / App contributor account
+
+      const offUser = process.env.EXPO_PUBLIC_OFF_USER_ID || '';
+      const offPass = process.env.EXPO_PUBLIC_OFF_PASSWORD || '';
+      if (offUser && offPass) {
+        formData.append('user_id', offUser);
+        formData.append('password', offPass);
+      }
+
       formData.append('product_name', payload.productName);
       if (payload.brand) formData.append('brands', payload.brand);
       if (payload.category) formData.append('categories', payload.category);
@@ -73,7 +79,7 @@ export class OpenFoodFactsSubmitter {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'AIFoodScanner-Kerala-MVP/1.0',
+          'User-Agent': 'HealthScannerApp/1.0 (contact@healthscanner.app)',
         },
         body: formData.toString(),
       });
