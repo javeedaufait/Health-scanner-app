@@ -256,8 +256,27 @@ export default function ScanScreen() {
       if (!result.canceled && result.assets[0]?.base64) {
         const base64Image = result.assets[0].base64;
 
-        const ocrRes = await api.extractLabelNutrition(base64Image);
+        // 1. Extract barcode digits and non-food classification from image
+        const extracted = await api.extractBarcodeFromImage(base64Image);
 
+        if (extracted.isEdibleFood === false) {
+          setNonFoodData({
+            name: extracted.productName || 'Personal Care Item',
+            brand: extracted.brand || 'Supermarket Brand',
+            category: 'Personal Care / Household',
+          });
+          setShowNonFoodModal(true);
+          return;
+        }
+
+        // 2. If a barcode number was read, process it through real catalog / OpenFoodFacts lookup
+        if (extracted.barcode) {
+          await processBarcodeScan(extracted.barcode);
+          return;
+        }
+
+        // 3. Fallback: If no barcode digits read, check if label nutrition text is present
+        const ocrRes = await api.extractLabelNutrition(base64Image);
         if (ocrRes.data.isEdibleFood === false) {
           setNonFoodData({
             name: ocrRes.data.productName || 'Personal Care Item',
@@ -268,8 +287,21 @@ export default function ScanScreen() {
           return;
         }
 
+        // Check if any valid nutrition numbers were extracted
+        const hasNutritionData = Object.values(ocrRes.data.nutrition || {}).some(
+          (val) => val !== null && val !== undefined
+        );
+
+        if (!hasNutritionData) {
+          Alert.alert(
+            'Barcode Not Detected',
+            'Could not clearly read a barcode number or nutrition table from this image. Please select a photo where the barcode digits (EAN/UPC) or nutrition facts panel are clearly visible.'
+          );
+          return;
+        }
+
         const customData = {
-          name: ocrRes.data.productName || 'Gallery Barcode Product',
+          name: ocrRes.data.productName || 'Gallery Scanned Product',
           brand: ocrRes.data.brand || 'Supermarket Product',
           nutrition: ocrRes.data.nutrition,
           ingredientsList: ocrRes.data.ingredients,

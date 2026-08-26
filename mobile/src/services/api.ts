@@ -949,14 +949,108 @@ class LocalApiClient {
     });
   }
 
+  // --- Direct Multimodal Gemini Flash Barcode Extractor ---
+  async extractBarcodeFromImage(imageBase64: string): Promise<{ barcode: string | null; isEdibleFood?: boolean; productName?: string; brand?: string }> {
+    const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY || 'AIzaSyBfcZNbgidDewXSLGFPIuscWIR6aMPyl4o';
+
+    if (apiKey) {
+      const modelsToTry = ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.6-flash'];
+      const cleanBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+
+      const prompt = `You are an expert OCR barcode reader AI.
+CRITICAL INSTRUCTION FOR ORIENTATION: The barcode lines or printed numbers in this photo may be rotated 90 degrees vertically (sideways), upside down, or horizontal.
+Examine the image in all orientations to read the 8 to 14 digit barcode sequence (e.g. "8908014672065", "801092222147", "8906202520051").
+
+Also check if the scanned item is a NON-FOOD product (e.g. toothpaste, soap, shampoo, cosmetics, detergent, stationery).
+
+Return STRICT JSON ONLY matching:
+{
+  "barcode": string or null (digits only),
+  "is_edible_food": boolean,
+  "product_name": string or null,
+  "brand": string or null
+}`;
+
+      for (const model of modelsToTry) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    { text: prompt },
+                    { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
+                  ],
+                },
+              ],
+              generationConfig: {
+                response_mime_type: 'application/json',
+              },
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json() as any;
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) {
+              let extractedBarcode: string | null = null;
+              let isEdible = true;
+              let prodName: string | undefined;
+              let brandName: string | undefined;
+
+              try {
+                const parsed = JSON.parse(text);
+                if (parsed.barcode) {
+                  const digits = String(parsed.barcode).replace(/[^0-9]/g, '');
+                  if (digits.length >= 8 && digits.length <= 14) {
+                    extractedBarcode = digits;
+                  }
+                }
+                isEdible = parsed.is_edible_food ?? true;
+                prodName = parsed.product_name;
+                brandName = parsed.brand;
+              } catch {}
+
+              // Regex Fallback: If JSON barcode was null, search full raw text for any 8-14 digit sequence
+              if (!extractedBarcode) {
+                const matches = text.match(/\b\d{8,14}\b/g);
+                if (matches && matches.length > 0) {
+                  extractedBarcode = matches[0];
+                }
+              }
+
+              if (extractedBarcode || isEdible === false) {
+                return {
+                  barcode: extractedBarcode,
+                  isEdibleFood: isEdible,
+                  productName: prodName,
+                  brand: brandName,
+                };
+              }
+            }
+          }
+        } catch (err) {
+          console.warn(`Barcode extraction error with model ${model}:`, err);
+        }
+      }
+    }
+
+    return { barcode: null, isEdibleFood: true };
+  }
+
   // --- Direct Multimodal Gemini Flash OCR ---
   async extractLabelNutrition(imageBase64: string) {
     const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY || 'AIzaSyBfcZNbgidDewXSLGFPIuscWIR6aMPyl4o';
 
     if (apiKey) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
-        const prompt = `You are an expert product label OCR extractor. First, check if the scanned product is an edible food or beverage.
+      const modelsToTry = ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.6-flash'];
+      const cleanBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+
+      const prompt = `You are an expert product label OCR extractor. First, check if the scanned product is an edible food or beverage.
 If the item is a NON-FOOD product (e.g. toothpaste, shampoo, soap, cosmetics, detergent, stationery, electronics), set "is_edible_food": false, extract its actual product name (e.g. "Dabur Red Toothpaste") and brand (e.g. "Dabur"), and set ALL nutrition values to null.
 
 Return STRICT JSON ONLY matching:
@@ -984,67 +1078,70 @@ Return STRICT JSON ONLY matching:
 }
 CRITICAL SAFETY INSTRUCTION: Extract real printed details. If any value is missing, unreadable, or non-applicable, set it to null. Never invent fake numbers.`;
 
-        const cleanBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+      for (const model of modelsToTry) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: prompt },
-                  { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
-                ],
-              },
-            ],
-            generationConfig: {
-              response_mime_type: 'application/json',
-            },
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json() as any;
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) {
-            const parsed = JSON.parse(text);
-            const validated = ExtractedLabelNutritionSchema.parse(parsed);
-
-            const isEdible = validated.is_edible_food ?? true;
-
-            return {
-              success: true,
-              data: {
-                isEdibleFood: isEdible,
-                productName: validated.product_name || (isEdible ? 'Captured Food Product' : 'Non-Food Item'),
-                brand: validated.brand || (isEdible ? 'Supermarket Product' : 'Personal Care / Household'),
-                servingSize: validated.serving_size || (isEdible ? '100g' : ''),
-                nutrition: isEdible ? {
-                  energyKcal: validated.nutrition.energy_kcal ?? null,
-                  carbohydratesG: validated.nutrition.carbohydrates_g ?? null,
-                  sugarsG: validated.nutrition.total_sugars_g ?? null,
-                  addedSugarsG: validated.nutrition.added_sugars_g ?? null,
-                  proteinG: validated.nutrition.protein_g ?? null,
-                  fatG: validated.nutrition.total_fat_g ?? null,
-                  saturatedFatG: validated.nutrition.saturated_fat_g ?? null,
-                  transFatG: validated.nutrition.trans_fat_g ?? null,
-                  fibreG: validated.nutrition.fiber_g ?? null,
-                  sodiumMg: validated.nutrition.sodium_mg ?? null,
-                  saltG: validated.nutrition.salt_g ?? null,
-                } : {
-                  energyKcal: null, carbohydratesG: null, sugarsG: null, addedSugarsG: null,
-                  proteinG: null, fatG: null, saturatedFatG: null, transFatG: null, fibreG: null, sodiumMg: null, saltG: null
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    { text: prompt },
+                    { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
+                  ],
                 },
-                ingredients: validated.ingredients || [],
-                allergens: validated.allergens || [],
-                confidence: validated.confidence ?? 0.95,
+              ],
+              generationConfig: {
+                response_mime_type: 'application/json',
               },
-            };
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json() as any;
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) {
+              const parsed = JSON.parse(text);
+              const validated = ExtractedLabelNutritionSchema.parse(parsed);
+
+              const isEdible = validated.is_edible_food ?? true;
+
+              return {
+                success: true,
+                data: {
+                  isEdibleFood: isEdible,
+                  productName: validated.product_name || (isEdible ? 'Captured Food Product' : 'Non-Food Item'),
+                  brand: validated.brand || (isEdible ? 'Supermarket Product' : 'Personal Care / Household'),
+                  servingSize: validated.serving_size || (isEdible ? '100g' : ''),
+                  nutrition: isEdible ? {
+                    energyKcal: validated.nutrition.energy_kcal ?? null,
+                    carbohydratesG: validated.nutrition.carbohydrates_g ?? null,
+                    sugarsG: validated.nutrition.total_sugars_g ?? null,
+                    addedSugarsG: validated.nutrition.added_sugars_g ?? null,
+                    proteinG: validated.nutrition.protein_g ?? null,
+                    fatG: validated.nutrition.total_fat_g ?? null,
+                    saturatedFatG: validated.nutrition.saturated_fat_g ?? null,
+                    transFatG: validated.nutrition.trans_fat_g ?? null,
+                    fibreG: validated.nutrition.fiber_g ?? null,
+                    sodiumMg: validated.nutrition.sodium_mg ?? null,
+                    saltG: validated.nutrition.salt_g ?? null,
+                  } : {
+                    energyKcal: null, carbohydratesG: null, sugarsG: null, addedSugarsG: null,
+                    proteinG: null, fatG: null, saturatedFatG: null, transFatG: null, fibreG: null, sodiumMg: null, saltG: null
+                  },
+                  ingredients: validated.ingredients || [],
+                  allergens: validated.allergens || [],
+                  confidence: validated.confidence ?? 0.95,
+                },
+              };
+            }
           }
+        } catch (err) {
+          console.warn(`Direct Gemini Vision extraction error with model ${model}:`, err);
         }
-      } catch (err) {
-        console.warn('Direct Gemini Vision extraction error:', err);
       }
     }
 
@@ -1073,12 +1170,11 @@ CRITICAL SAFETY INSTRUCTION: Extract real printed details. If any value is missi
       return this.extractLabelNutrition('');
     }
 
-    const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+    const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY || 'AIzaSyBfcZNbgidDewXSLGFPIuscWIR6aMPyl4o';
     if (apiKey) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
+      const modelsToTry = ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.6-flash'];
 
-        const prompt = `You are an expert product label OCR extractor. First, check if the scanned product is an edible food or beverage.
+      const prompt = `You are an expert product label OCR extractor. First, check if the scanned product is an edible food or beverage.
 If the item is a NON-FOOD product (e.g. toothpaste, shampoo, soap, cosmetics, detergent, stationery, electronics), set "is_edible_food": false, extract its actual product name (e.g. "Dabur Red Toothpaste") and brand (e.g. "Dabur"), and set ALL nutrition values to null.
 
 Return STRICT JSON ONLY matching:
@@ -1106,69 +1202,74 @@ Return STRICT JSON ONLY matching:
 }
 CRITICAL SAFETY INSTRUCTION: Extract real printed details from the photo(s). If any value is missing, unreadable, or non-applicable, set it to null. Never invent fake numbers.`;
 
-        const imageParts = base64Images.map((b64) => ({
-          inlineData: {
-            mimeType: 'image/jpeg',
-            data: b64.replace(/^data:image\/[a-z]+;base64,/, ''),
-          },
-        }));
+      const imageParts = base64Images.map((b64) => ({
+        inlineData: {
+          mimeType: 'image/jpeg',
+          data: b64.replace(/^data:image\/[a-z]+;base64,/, ''),
+        },
+      }));
 
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [{ text: prompt }, ...imageParts],
-              },
-            ],
-            generationConfig: {
-              response_mime_type: 'application/json',
-            },
-          }),
-        });
+      for (const model of modelsToTry) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-        if (response.ok) {
-          const data = await response.json() as any;
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) {
-            const parsed = JSON.parse(text);
-            const validated = ExtractedLabelNutritionSchema.parse(parsed);
-
-            const isEdible = validated.is_edible_food ?? true;
-
-            return {
-              success: true,
-              data: {
-                isEdibleFood: isEdible,
-                productName: validated.product_name || (isEdible ? 'Captured Food Product' : 'Non-Food Item'),
-                brand: validated.brand || (isEdible ? 'Supermarket Product' : 'Personal Care / Household'),
-                servingSize: validated.serving_size || (isEdible ? '100g' : ''),
-                nutrition: isEdible ? {
-                  energyKcal: validated.nutrition.energy_kcal ?? null,
-                  carbohydratesG: validated.nutrition.carbohydrates_g ?? null,
-                  sugarsG: validated.nutrition.total_sugars_g ?? null,
-                  addedSugarsG: validated.nutrition.added_sugars_g ?? null,
-                  proteinG: validated.nutrition.protein_g ?? null,
-                  fatG: validated.nutrition.total_fat_g ?? null,
-                  saturatedFatG: validated.nutrition.saturated_fat_g ?? null,
-                  transFatG: validated.nutrition.trans_fat_g ?? null,
-                  fibreG: validated.nutrition.fiber_g ?? null,
-                  sodiumMg: validated.nutrition.sodium_mg ?? null,
-                  saltG: validated.nutrition.salt_g ?? null,
-                } : {
-                  energyKcal: null, carbohydratesG: null, sugarsG: null, addedSugarsG: null,
-                  proteinG: null, fatG: null, saturatedFatG: null, transFatG: null, fibreG: null, sodiumMg: null, saltG: null
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [{ text: prompt }, ...imageParts],
                 },
-                ingredients: validated.ingredients || [],
-                allergens: validated.allergens || [],
-                confidence: validated.confidence ?? 0.95,
+              ],
+              generationConfig: {
+                response_mime_type: 'application/json',
               },
-            };
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json() as any;
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) {
+              const parsed = JSON.parse(text);
+              const validated = ExtractedLabelNutritionSchema.parse(parsed);
+
+              const isEdible = validated.is_edible_food ?? true;
+
+              return {
+                success: true,
+                data: {
+                  isEdibleFood: isEdible,
+                  productName: validated.product_name || (isEdible ? 'Captured Food Product' : 'Non-Food Item'),
+                  brand: validated.brand || (isEdible ? 'Supermarket Product' : 'Personal Care / Household'),
+                  servingSize: validated.serving_size || (isEdible ? '100g' : ''),
+                  nutrition: isEdible ? {
+                    energyKcal: validated.nutrition.energy_kcal ?? null,
+                    carbohydratesG: validated.nutrition.carbohydrates_g ?? null,
+                    sugarsG: validated.nutrition.total_sugars_g ?? null,
+                    addedSugarsG: validated.nutrition.added_sugars_g ?? null,
+                    proteinG: validated.nutrition.protein_g ?? null,
+                    fatG: validated.nutrition.total_fat_g ?? null,
+                    saturatedFatG: validated.nutrition.saturated_fat_g ?? null,
+                    transFatG: validated.nutrition.trans_fat_g ?? null,
+                    fibreG: validated.nutrition.fiber_g ?? null,
+                    sodiumMg: validated.nutrition.sodium_mg ?? null,
+                    saltG: validated.nutrition.salt_g ?? null,
+                  } : {
+                    energyKcal: null, carbohydratesG: null, sugarsG: null, addedSugarsG: null,
+                    proteinG: null, fatG: null, saturatedFatG: null, transFatG: null, fibreG: null, sodiumMg: null, saltG: null
+                  },
+                  ingredients: validated.ingredients || [],
+                  allergens: validated.allergens || [],
+                  confidence: validated.confidence ?? 0.95,
+                },
+              };
+            }
           }
+        } catch (err) {
+          console.warn(`Direct Gemini Vision multi-photo extraction error with model ${model}:`, err);
         }
-      } catch (err) {
-        console.warn('Direct Gemini Vision multi-photo extraction error:', err);
       }
     }
 
