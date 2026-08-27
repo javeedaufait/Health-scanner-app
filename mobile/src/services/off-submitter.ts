@@ -60,17 +60,51 @@ export class OpenFoodFactsSubmitter {
       if (payload.ingredientsText) formData.append('ingredients_text', payload.ingredientsText);
 
       const n = payload.nutrition;
-      if (n.energyKcal != null) formData.append('nutriment_energy-kcal_100g', String(n.energyKcal));
-      if (n.carbohydratesG != null) formData.append('nutriment_carbohydrates_100g', String(n.carbohydratesG));
-      if (n.sugarsG != null) formData.append('nutriment_sugars_100g', String(n.sugarsG));
-      if (n.addedSugarsG != null) formData.append('nutriment_added-sugars_100g', String(n.addedSugarsG));
-      if (n.proteinG != null) formData.append('nutriment_proteins_100g', String(n.proteinG));
-      if (n.fatG != null) formData.append('nutriment_fat_100g', String(n.fatG));
-      if (n.saturatedFatG != null) formData.append('nutriment_saturated-fat_100g', String(n.saturatedFatG));
-      if (n.transFatG != null) formData.append('nutriment_trans-fat_100g', String(n.transFatG));
-      if (n.fibreG != null) formData.append('nutriment_fiber_100g', String(n.fibreG));
-      if (n.sodiumMg != null) formData.append('nutriment_sodium_100g', String(n.sodiumMg / 1000));
-      if (n.saltG != null) formData.append('nutriment_salt_100g', String(n.saltG));
+      formData.append('nutrition_data_per', '100g');
+      if (n.energyKcal != null) {
+        formData.append('nutriment_energy-kcal', String(n.energyKcal));
+        formData.append('nutriment_energy-kcal_unit', 'kcal');
+      }
+      if (n.carbohydratesG != null) {
+        formData.append('nutriment_carbohydrates', String(n.carbohydratesG));
+        formData.append('nutriment_carbohydrates_unit', 'g');
+      }
+      if (n.sugarsG != null) {
+        formData.append('nutriment_sugars', String(n.sugarsG));
+        formData.append('nutriment_sugars_unit', 'g');
+      }
+      if (n.addedSugarsG != null) {
+        formData.append('nutriment_added-sugars', String(n.addedSugarsG));
+        formData.append('nutriment_added-sugars_unit', 'g');
+      }
+      if (n.proteinG != null) {
+        formData.append('nutriment_proteins', String(n.proteinG));
+        formData.append('nutriment_proteins_unit', 'g');
+      }
+      if (n.fatG != null) {
+        formData.append('nutriment_fat', String(n.fatG));
+        formData.append('nutriment_fat_unit', 'g');
+      }
+      if (n.saturatedFatG != null) {
+        formData.append('nutriment_saturated-fat', String(n.saturatedFatG));
+        formData.append('nutriment_saturated-fat_unit', 'g');
+      }
+      if (n.transFatG != null) {
+        formData.append('nutriment_trans-fat', String(n.transFatG));
+        formData.append('nutriment_trans-fat_unit', 'g');
+      }
+      if (n.fibreG != null) {
+        formData.append('nutriment_fiber', String(n.fibreG));
+        formData.append('nutriment_fiber_unit', 'g');
+      }
+      if (n.sodiumMg != null) {
+        formData.append('nutriment_sodium', String(n.sodiumMg / 1000));
+        formData.append('nutriment_sodium_unit', 'g');
+      }
+      if (n.saltG != null) {
+        formData.append('nutriment_salt', String(n.saltG));
+        formData.append('nutriment_salt_unit', 'g');
+      }
 
       formData.append('comment', 'Contributed via AI Health Scanner India Mobile App');
 
@@ -84,8 +118,19 @@ export class OpenFoodFactsSubmitter {
         body: formData.toString(),
       });
 
-      if (!metaRes.ok) {
-        console.warn('OpenFoodFacts metadata post warning:', metaRes.status);
+      if (metaRes.ok) {
+        try {
+          const metaJson = await metaRes.json() as any;
+          if (metaJson.status === 1) {
+            console.log('OpenFoodFacts submission accepted:', metaJson.status_verbose || 'Saved');
+          } else {
+            console.warn('OpenFoodFacts submission rejected:', metaJson.status_verbose || 'Failed');
+          }
+        } catch {
+          console.warn('OpenFoodFacts returned non-JSON response');
+        }
+      } else {
+        console.warn('OpenFoodFacts metadata post HTTP warning:', metaRes.status);
       }
 
       // 2. Upload images if available
@@ -96,8 +141,10 @@ export class OpenFoodFactsSubmitter {
 
           const imgForm = new FormData();
           imgForm.append('code', barcode);
-          imgForm.append('user_id', 'health_scanner_app');
-          imgForm.append('password', 'open_contributor');
+          if (offUser && offPass) {
+            imgForm.append('user_id', offUser);
+            imgForm.append('password', offPass);
+          }
           imgForm.append('imagefield', i === 0 ? 'front_en' : i === 1 ? 'nutrition_en' : 'ingredients_en');
           imgForm.append(`imgupload_${i === 0 ? 'front' : i === 1 ? 'nutrition' : 'ingredients'}`, {
             uri: `data:image/jpeg;base64,${imgBase64}`,
@@ -108,7 +155,7 @@ export class OpenFoodFactsSubmitter {
           fetch(this.IMAGE_API_URL, {
             method: 'POST',
             headers: {
-              'User-Agent': 'AIFoodScanner-Kerala-MVP/1.0',
+              'User-Agent': 'HealthScannerApp/1.0 (contact@healthscanner.app)',
             },
             body: imgForm,
           }).catch((err) => console.warn('OpenFoodFacts image upload background log:', err));
